@@ -22,8 +22,8 @@ app.add_middleware(
 
 # Environment Variables
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://llhsmmhgkvefilqcoldf.supabase.co")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("sb_secret_OF7IIdbtv6mBBPgx_olh-A_c0yZz3hO")
+SUPABASE_ANON_KEY = os.getenv("sb_publishable_X_TzhNLl5JrDvCakmFPp8Q_FPrFu92O")
 
 # Usa sempre la SERVICE_ROLE_KEY se possibile, altrimenti fallback su ANON_KEY
 supabase = create_client(
