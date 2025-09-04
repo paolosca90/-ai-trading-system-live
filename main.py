@@ -5,11 +5,9 @@ from pydantic import BaseModel
 import os
 import logging
 from datetime import datetime, timedelta
-import json
 import hashlib
 import jwt
 from supabase import create_client
-import asyncio
 
 app = FastAPI(title="AI Trading System 2.0 - Live")
 security = HTTPBearer()
@@ -31,12 +29,10 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 supabase = create_client(
     SUPABASE_URL, 
     SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY
+)
 JWT_SECRET = os.getenv("JWT_SECRET", "ai-trading-production-secret-key-2025-very-secure-64-chars-min")
 MT5_HOST = os.getenv("MT5_HOST", "154.61.187.189")
 MT5_LOGIN = os.getenv("MT5_LOGIN", "67163307")
-
-# Supabase client
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -69,7 +65,7 @@ async def root():
         "message": "🚀 AI Trading System 2.0 - LIVE & OPERATIVO!", 
         "status": "running",
         "supabase_url": SUPABASE_URL,
-        "supabase_connected": bool(SUPABASE_SERVICE_KEY),
+        "supabase_connected": bool(SUPABASE_SERVICE_ROLE_KEY),
         "mt5_server": MT5_HOST,
         "mt5_login": MT5_LOGIN,
         "timestamp": datetime.utcnow().isoformat()
