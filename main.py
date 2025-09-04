@@ -24,8 +24,13 @@ app.add_middleware(
 
 # Environment Variables
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://llhsmmhgkvefilqcoldf.supabase.co")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsaHNtbWhna3ZlZmlscWNvbGRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwMTM2NjQsImV4cCI6MjA3MjU4OTY2NH0.zHOgvhFLDSbNhMlAI5dj1kDkCnjGrzjAzds2ku1KA9M")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+
+# Usa sempre la SERVICE_ROLE_KEY se possibile, altrimenti fallback su ANON_KEY
+supabase = create_client(
+    SUPABASE_URL, 
+    SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY
 JWT_SECRET = os.getenv("JWT_SECRET", "ai-trading-production-secret-key-2025-very-secure-64-chars-min")
 MT5_HOST = os.getenv("MT5_HOST", "154.61.187.189")
 MT5_LOGIN = os.getenv("MT5_LOGIN", "67163307")
