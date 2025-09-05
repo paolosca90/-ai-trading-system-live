@@ -29,8 +29,12 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     Registra nuovo utente
     """
     try:
+        # DEBUG: stampo i dati ricevuti
+        print("REGISTRO:", user)
+
         # Hash della password
         hashed_password = hash_password(user.password)
+        print("HASH PASSWORD OK")
 
         # Crea nuovo utente
         db_user = User(
@@ -41,8 +45,11 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
         # Salva nel database
         db.add(db_user)
+        print("USER AGGIUNTO AL DB")
         db.commit()
+        print("COMMIT OK")
         db.refresh(db_user)
+        print("USER SALVATO OK")
 
         return UserResponse(
             message="Utente registrato con successo",
@@ -52,6 +59,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     except IntegrityError as e:
         db.rollback()
         error_info = str(e.orig)
+        print("ERRORE INTEGRITY:", error_info)
 
         if "username" in error_info:
             raise HTTPException(
@@ -71,6 +79,8 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
     except Exception as e:
         db.rollback()
+        print("ERRORE REGISTER:", repr(e))
+        print("TIPO ERRORE:", type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Errore interno del server"
