@@ -1,0 +1,9 @@
+# nixpacks.toml
+# Configurazione per Railway/Nixpacks
+
+[phases.setup]
+aptPkgs = ['python3-distutils']
+
+[phases.install]
+# Mantiene l'installazione pip standard
+cmds = ['pip install -r requirements.txt']
