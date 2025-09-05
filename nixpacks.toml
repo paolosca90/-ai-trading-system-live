@@ -1,9 +1,7 @@
-# nixpacks.toml
-# Configurazione per Railway/Nixpacks
-
+# nixpacks.toml (sostituisci il contenuto con questo)
 [phases.setup]
-aptPkgs = ['python3-distutils']
+# Variante robusta per Ubuntu 24.04 (noble)
+aptPkgs = ['python3-dev', 'build-essential', 'python3-setuptools']
 
 [phases.install]
-# Mantiene l'installazione pip standard
 cmds = ['pip install -r requirements.txt']
