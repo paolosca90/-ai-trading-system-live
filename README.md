@@ -1,149 +1,69 @@
-# Trading SaaS Backend - Sistema Centralizzato
+# Trading Backend API - Railway Deploy
 
-## 🎯 DESCRIZIONE DEL SISTEMA
+## Files in this package:
 
-Sistema SaaS professionale per trading signals con:
-- **Sistema centralizzato**: Analisi e ML sul server, esecuzione locale su MT5
-- **Dati reali MT5**: Nessun costo API esterne, dati tick-level
-- **AI Gemini**: Spiegazioni intelligenti per ogni segnale  
-- **Machine Learning**: Sistema auto-apprendimento da risultati
-- **Architettura scalabile**: Railway deployment ready
+1. **main.py** - FastAPI main application with all endpoints
+2. **database.py** - Database configuration (PostgreSQL)
+3. **models.py** - SQLAlchemy models (User, Signal, Subscription, etc.)
+4. **schemas.py** - Pydantic schemas for API validation
+5. **jwt_auth.py** - JWT authentication and authorization
+6. **requirements.txt** - Python dependencies (compatible with Python 3.12)
+7. **nixpacks.toml** - Railway/Nixpacks configuration
+8. **.env.example** - Environment variables example
 
----
+## Deploy Instructions on Railway:
 
-## 📁 STRUTTURA FILE
+### 1. Environment Variables:
+Set these in Railway Dashboard → Settings → Environment Variables:
+- `SECRET_KEY` = [generate a strong random string]
+- `DATABASE_URL` = [Railway provides this automatically]
 
-### File Core Sistema:
-- **main.py**: API FastAPI completa con tutti gli endpoints
-- **models.py**: Database models (User, Signal, Subscription, MT5Connection)
-- **schemas.py**: Validazione Pydantic per API
-- **jwt_auth.py**: Autenticazione JWT completa
-- **signal_engine.py**: Motore professionale generazione segnali
+### 2. Deploy:
+1. Upload all files to your GitHub repository
+2. Connect GitHub repo to Railway
+3. Railway will auto-deploy using nixpacks.toml configuration
 
-### File Configurazione:
-- **database.py**: Setup PostgreSQL per Railway  
-- **auth.py**: Utilities hash password (bcrypt)
-- **requirements.txt**: Dipendenze complete
-- **Procfile**: Config deployment Railway
-- **.gitignore**: File da ignorare in git
+### 3. After Deploy:
+- Visit: `https://your-app.up.railway.app/docs` for API documentation
+- Test the `/health` endpoint to verify it's working
 
----
+## API Endpoints:
 
-## 🚀 DEPLOYMENT RAILWAY
+### Authentication:
+- `POST /register` - Register new user
+- `POST /token` - Login and get JWT tokens
+- `GET /me` - Get current user info with stats
 
-### 1. Environment Variables Richieste:
+### Signals:
+- `GET /signals/top` - Get top 3 public signals
+- `GET /signals` - Get user signals (with filters)
+- `POST /signals` - Create signal (admin only)
 
-**SECRET_KEY** (obbligatorio): 
-- Chiave per JWT tokens
-- Genera con: `python -c "import secrets; print(secrets.token_hex(32))"`
+### MT5 Integration:
+- `POST /mt5/connect` - Setup MT5 connection
+- `GET /mt5/status` - Get MT5 connection status
 
-**GEMINI_API_KEY** (opzionale):
-- Per spiegazioni AI dei segnali
-- Ottieni su: https://makersuite.google.com/app/apikey
+### Admin:
+- `POST /admin/generate-signals` - Generate signals manually
 
-**DATABASE_URL** (automatico):
-- Railway lo fornisce automaticamente
+## Features:
+- ✅ User registration with 7-day trial
+- ✅ JWT authentication with access/refresh tokens
+- ✅ Signal creation and management
+- ✅ User statistics and analytics
+- ✅ MT5 integration placeholder
+- ✅ Admin panel functions
+- ✅ CORS enabled for frontend integration
+- ✅ PostgreSQL database with relationships
+- ✅ Python 3.12 compatible
+- ✅ Ready for Railway deployment
 
-### 2. Steps Deploy:
+## Next Steps:
+1. Deploy backend ✅
+2. Test API endpoints
+3. Build frontend React app
+4. Implement AI signal generation
+5. Add real MT5 integration
+6. Create executable for clients
 
-1. Carica tutti i file su GitHub
-2. Collega repository a Railway
-3. Aggiungi environment variables
-4. Deploy automatico
-5. Test su: `https://your-app.railway.app/docs`
-
----
-
-## 🎯 ENDPOINTS API DISPONIBILI
-
-### Autenticazione:
-- `POST /register` - Registrazione con trial gratuito 7 giorni
-- `POST /token` - Login con JWT tokens  
-- `GET /me` - Profilo utente + statistiche complete
-
-### Segnali Trading:
-- `GET /signals/top` - Top 3 segnali pubblici (reliability ≥70%)
-- `GET /signals` - Segnali utente con filtri avanzati
-- `POST /signals` - Crea segnale (admin only)
-
-### MetaTrader 5:
-- `POST /mt5/connect` - Setup connessione MT5
-- `GET /mt5/status` - Status connessione
-
-### Sistema:
-- `GET /health` - Health check
-- `GET /docs` - Documentazione completa
-
----
-
-## 💎 FUNZIONALITÀ PROFESSIONALI
-
-### Sistema Segnali:
-- **Analisi Tecnica**: RSI, MACD, Bollinger Bands, ATR, SMA/EMA
-- **Price Action**: Pattern candele, trend analysis, supporti/resistenze
-- **Scoring Affidabilità**: 0-100% basato su analisi multi-indicatore
-- **Stop Loss/Take Profit**: Calcolati automaticamente con ATR
-- **Spiegazioni AI**: Motivi del segnale con Gemini
-
-### Gestione Utenti:
-- **Trial Gratuito**: 7 giorni automatici alla registrazione
-- **Statistiche Avanzate**: Win rate, P&L, reliability media
-- **Sistema Subscription**: Gestione abbonamenti completa
-- **Sicurezza JWT**: Tokens con refresh automatico
-
-### Architettura:
-- **Dati MT5 Reali**: Tick data, volumi, spread reali
-- **Multi-timeframe**: Analisi M1 fino a Daily
-- **Database Completo**: Tracking completo segnali e performance
-- **Logging**: Sistema completo per debugging/monitoring
-
----
-
-## 🔧 SVILUPPO LOCALE
-
-```bash
-# Installa dipendenze
-pip install -r requirements.txt
-
-# Setup environment variables
-export SECRET_KEY="your-secret-key"
-export DATABASE_URL="postgresql://..."
-export GEMINI_API_KEY="your-gemini-key"
-
-# Avvia server
-uvicorn main:app --reload
-
-# Test API
-open http://localhost:8000/docs
-```
-
----
-
-## 📊 PROSSIME FASI
-
-### FASE 2 - Machine Learning (in sviluppo):
-- Neural network per miglioramento segnali
-- Auto-learning dai risultati trade
-- Continuous training pipeline
-
-### FASE 3 - MT5 Bridge Client:
-- Executable Windows per utenti
-- Auto-installazione MT5
-- WebSocket real-time per segnali
-
-### FASE 4 - Frontend Dashboard:
-- React dashboard completa
-- Visualizzazione segnali real-time
-- Gestione abbonamenti e pagamenti
-
----
-
-## 🎬 DEMO & TEST
-
-1. **Registra utente**: POST `/register` - trial 7 giorni automatico
-2. **Fai login**: POST `/token` - ottieni JWT
-3. **Visualizza profilo**: GET `/me` - statistiche complete  
-4. **Segnali top**: GET `/signals/top` - migliori segnali pubblici
-5. **Setup MT5**: POST `/mt5/connect` - connessione trading
-
-**Sistema pronto per produzione! 🚀**
+All fixed and ready for production! 🚀

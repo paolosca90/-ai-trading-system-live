@@ -10,7 +10,7 @@ from typing import List, Optional
 from database import SessionLocal, engine
 from models import Base, User, Signal, Subscription, MT5Connection, SignalExecution
 from schemas import (
-    UserCreate, UserResponse, UserLogin, Token, SignalCreate, SignalOut,
+    UserCreate, UserResponse, Token, SignalCreate, SignalOut,
     SignalResponse, TopSignalsResponse, MT5ConnectionCreate, MT5ConnectionOut,
     SignalExecutionCreate, SignalExecutionOut, SignalFilter, UserStatsOut
 )
@@ -101,7 +101,6 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     except IntegrityError as e:
         db.rollback()
         error_info = str(e.orig)
-
         if "username" in error_info:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -156,20 +155,21 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
 @app.get("/me", response_model=UserStatsOut)
 def get_current_user_info(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     """Get current user information with statistics"""
-
     # Get user signals statistics
     total_signals = db.query(Signal).filter(Signal.user_id == current_user.id).count()
     active_signals = db.query(Signal).filter(
-        Signal.user_id == current_user.id, 
+        Signal.user_id == current_user.id,
         Signal.is_active == True
     ).count()
+
     winning_signals = db.query(Signal).filter(
         Signal.user_id == current_user.id,
         Signal.outcome == "WIN"
     ).count()
+
     losing_signals = db.query(Signal).filter(
         Signal.user_id == current_user.id,
-        Signal.outcome == "LOSS"  
+        Signal.outcome == "LOSS"
     ).count()
 
     # Calculate win rate
@@ -208,7 +208,6 @@ def get_current_user_info(current_user: User = Depends(get_current_active_user),
 @app.get("/signals/top", response_model=TopSignalsResponse)
 def get_top_signals(db: Session = Depends(get_db)):
     """Get top 3 public signals with highest reliability"""
-
     top_signals = db.query(Signal).filter(
         Signal.is_public == True,
         Signal.is_active == True,
@@ -228,7 +227,6 @@ def get_user_signals(
     db: Session = Depends(get_db)
 ):
     """Get user signals with filtering"""
-
     query = db.query(Signal).filter(Signal.user_id == current_user.id)
 
     # Apply filters
@@ -251,7 +249,6 @@ def get_user_signals(
 
     # Apply pagination
     signals = query.offset(filter_params.offset).limit(filter_params.limit).all()
-
     return signals
 
 @app.post("/signals", response_model=SignalResponse, status_code=status.HTTP_201_CREATED)
@@ -262,7 +259,6 @@ def create_signal(
     db: Session = Depends(get_db)
 ):
     """Create a new trading signal (admin only for now)"""
-
     # For now, only admin can create signals manually
     if not current_user.is_admin:
         raise HTTPException(
@@ -311,7 +307,6 @@ def setup_mt5_connection(
     db: Session = Depends(get_db)
 ):
     """Setup or update MT5 connection for user"""
-
     try:
         # Check if connection already exists
         existing_connection = db.query(MT5Connection).filter(
@@ -329,7 +324,6 @@ def setup_mt5_connection(
             existing_connection.account_type = connection_data.account_type
             existing_connection.updated_at = datetime.utcnow()
             db.commit()
-
             return {"message": "Connessione MT5 aggiornata con successo"}
         else:
             # Create new connection
@@ -339,10 +333,8 @@ def setup_mt5_connection(
                 broker=connection_data.broker,
                 account_type=connection_data.account_type
             )
-
             db.add(new_connection)
             db.commit()
-
             return {"message": "Connessione MT5 configurata con successo"}
 
     except Exception as e:
@@ -358,7 +350,6 @@ def get_mt5_connection_status(
     db: Session = Depends(get_db)
 ):
     """Get MT5 connection status for current user"""
-
     connection = db.query(MT5Connection).filter(
         MT5Connection.user_id == current_user.id
     ).first()
@@ -379,7 +370,6 @@ def generate_signals_manually(
     db: Session = Depends(get_db)
 ):
     """Generate signals manually (admin only)"""
-
     if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
