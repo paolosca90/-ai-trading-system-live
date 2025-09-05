@@ -1,7 +1,6 @@
-# nixpacks.toml (sostituisci il contenuto con questo)
+# nixpacks.toml
 [phases.setup]
-# Variante robusta per Ubuntu 24.04 (noble)
 aptPkgs = ['python3-dev', 'build-essential', 'python3-setuptools']
 
 [phases.install]
-cmds = ['pip install -r requirements.txt']
+cmds = ['python -m pip install -r requirements.txt']
