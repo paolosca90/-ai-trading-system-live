@@ -1,10 +1,53 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-passlib==1.7.4
-bcrypt==4.0.1
-python-jose[cryptography]
-python-dotenv
-pydantic[email]
-python-multipart
+# Backend API Dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Database & ORM
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# Authentication & Security  
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.6
+
+# Data Validation
+pydantic[email]==2.5.0
+python-dotenv==1.0.0
+
+# HTTP Client & WebSockets
+httpx==0.25.2
+websockets==12.0
+requests==2.31.0
+
+# Machine Learning & Data Science
+pandas==2.1.3
+numpy==1.25.2
+scikit-learn==1.3.2
+torch==2.1.1
+talib-binary==0.4.25
+
+# MetaTrader 5 Integration
+MetaTrader5==5.0.45
+
+# Background Tasks & Scheduling
+celery==5.3.4
+redis==5.0.1
+apscheduler==3.10.4
+
+# API Documentation & Monitoring
+fastapi-limiter==0.1.6
+prometheus-client==0.19.0
+
+# Gemini AI Integration
+google-generativeai==0.3.2
+
+# Encryption & Utils
+cryptography==41.0.8
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Development & Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
