@@ -1,6 +1,12 @@
-# nixpacks.toml
 [phases.setup]
+# toolchain per build (Ubuntu noble) + setuptools
 aptPkgs = ['python3-dev', 'build-essential', 'python3-setuptools']
 
 [phases.install]
-cmds = ['python -m pip install -r requirements.txt']
+# 1) crea venv se non già presente (Nixpacks di solito la crea in /opt/venv)
+# 2) bootstrap di pip
+# 3) install requirements
+cmds = [
+  'python -m ensurepip --upgrade',
+  'python -m pip install -r requirements.txt'
+]
