@@ -19,3 +19,4 @@ requests==2.31.0
 # Coppia compatibile con Python 3.12 e wheel manylinux pronte:
 numpy==1.26.4
 pandas==2.2.2
+cryptography==41.0.7
