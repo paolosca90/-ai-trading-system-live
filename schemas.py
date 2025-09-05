@@ -1,29 +1,23 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from typing import Optional
 
 class UserCreate(BaseModel):
+    username: str
     email: EmailStr
     password: str
 
 class UserOut(BaseModel):
     id: int
-    email: EmailStr
-    class Config:
-        orm_mode = True
+    username: str
+    email: str
+    is_active: bool
+    is_admin: bool
+    created_at: datetime
 
-class SignalCreate(BaseModel):
-    ticker: str
-    strike: float
-    expiry: datetime
-    side: str
-
-class SignalOut(BaseModel):
-    id: int
-    ticker: str
-    strike: float
-    expiry: datetime
-    side: str
-    entry_time: datetime
-    user_id: int
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class UserResponse(BaseModel):
+    message: str
+    user: UserOut

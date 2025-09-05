@@ -1,21 +1,14 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy.sql import func
 from database import Base
-from datetime import datetime
 
 class User(Base):
     __tablename__ = "users"
+
     id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-
-class Signal(Base):
-    __tablename__ = "signals"
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    ticker = Column(String, nullable=False)
-    strike = Column(Float, nullable=False)
-    expiry = Column(DateTime, nullable=False)
-    side = Column(String, nullable=False)
-    entry_time = Column(DateTime, default=datetime.utcnow)
-    user = relationship("User")
+    is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
