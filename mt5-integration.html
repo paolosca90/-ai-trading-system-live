@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Cash-Revolution MT5 Integration - Connect your MetaTrader 5 account">
+    
+    <title>MT5 Integration - AI Cash-Revolution</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Source+Code+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="static/css/styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+</head>
+<body class="app-layout">
+    <!-- Matrix Rain Canvas Background -->
+    <canvas id="matrix-rain"></canvas>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">AI Cash-Revolution</span>
+                <span class="logo-subtitle">Trading Matrix</span>
+            </div>
+            <div class="nav-links">
+                <a href="dashboard.html" class="nav-link">Dashboard</a>
+                <a href="signals.html" class="nav-link">Signals</a>
+                <a href="profile.html" class="nav-link">Account</a>
+                <a href="mt5-integration.html" class="nav-link">MT5</a>
+                <a href="index.html" class="nav-link">Home</a>
+            </div>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="app-container">
+        <div class="mt5-header">
+            <h1 class="section-title">MT5 <span class="matrix-text">Integration</span></h1>
+            <p class="section-subtitle">Connect your MetaTrader 5 account for seamless signal execution</p>
+        </div>
+
+        <!-- Connection Status -->
+        <div class="integration-status disconnected" id="connectionStatus">
+            <div class="status-icon disconnected">🔌</div>
+            <h2 class="status-title disconnected">Not Connected</h2>
+            <p class="status-description">Connect your MT5 account to receive signals directly in your trading platform</p>
+        </div>
+
+        <!-- Setup Steps -->
+        <div class="setup-steps">
+            <h3 class="steps-title">Quick Setup Guide</h3>
+            <div class="steps-list">
+                <div class="step-item completed">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <div class="step-title">Download EA</div>
+                        <div class="step-description">Download our Expert Advisor for MT5</div>
+                    </div>
+                    <div class="step-action">
+                        <button class="step-btn completed">✓ Downloaded</button>
+                    </div>
+                </div>
+                
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <div class="step-title">Install EA</div>
+                        <div class="step-description">Install the EA in your MT5 platform</div>
+                    </div>
+                    <div class="step-action">
+                        <button class="step-btn" onclick="showInstallGuide()">View Guide</button>
+                    </div>
+                </div>
+                
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <div class="step-title">Connect Account</div>
+                        <div class="step-description">Link your MT5 account with our platform</div>
+                    </div>
+                    <div class="step-action">
+                        <button class="step-btn" onclick="showConnectionForm()">Connect Now</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connection Form -->
+        <div class="connection-section" id="connectionForm" style="display: none;">
+            <h3 class="section-subtitle">Connect Your MT5 Account</h3>
+            
+            <form class="connection-form" onsubmit="connectAccount(event)">
+                <div class="form-row">
+                    <div class="form-col">
+                        <label for="accountNumber">Account Number</label>
+                        <input type="text" id="accountNumber" name="accountNumber" placeholder="e.g., 12345678" required>
+                    </div>
+                    <div class="form-col">
+                        <label for="serverName">Server Name</label>
+                        <input type="text" id="serverName" name="serverName" placeholder="e.g., MetaQuotes-Demo" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-col">
+                        <label for="brokerName">Broker Name</label>
+                        <select id="brokerName" name="brokerName" required>
+                            <option value="">Select your broker</option>
+                            <option value="alpari">Alpari</option>
+                            <option value="fxpro">FxPro</option>
+                            <option value="ic-markets">IC Markets</option>
+                            <option value="pepperstone">Pepperstone</option>
+                            <option value="xm">XM</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-col">
+                        <label for="accountType">Account Type</label>
+                        <select id="accountType" name="accountType" required>
+                            <option value="">Select account type</option>
+                            <option value="demo">Demo Account</option>
+                            <option value="live">Live Account</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="apiKey">API Key (Generated by EA)</label>
+                    <input type="text" id="apiKey" name="apiKey" placeholder="Your unique API key from the EA" required>
+                    <div class="input-help">This key is generated automatically when you install our EA</div>
+                </div>
+                
+                <div class="form-checkbox">
+                    <input type="checkbox" id="autoTrade" name="autoTrade">
+                    <label for="autoTrade">Enable automatic signal execution (recommended for beginners)</label>
+                </div>
+                
+                <div class="form-checkbox">
+                    <input type="checkbox" id="riskManagement" name="riskManagement" checked>
+                    <label for="riskManagement">Enable built-in risk management (highly recommended)</label>
+                </div>
+                
+                <button type="submit" class="form-submit">
+                    <span class="submit-text">Connect Account</span>
+                    <span class="submit-icon">🔗</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Connected Account Info -->
+        <div class="connected-account" id="connectedAccount" style="display: none;">
+            <div class="account-card">
+                <div class="account-header">
+                    <div class="account-info">
+                        <div class="account-number">Account: #12345678</div>
+                        <div class="account-broker">IC Markets - Demo</div>
+                    </div>
+                    <div class="connection-badge connected">Connected</div>
+                </div>
+                
+                <div class="account-stats">
+                    <div class="account-stat">
+                        <div class="stat-label">Balance</div>
+                        <div class="stat-value">$10,000.00</div>
+                    </div>
+                    <div class="account-stat">
+                        <div class="stat-label">Equity</div>
+                        <div class="stat-value">$10,247.80</div>
+                    </div>
+                    <div class="account-stat">
+                        <div class="stat-label">Free Margin</div>
+                        <div class="stat-value">$9,876.45</div>
+                    </div>
+                    <div class="account-stat">
+                        <div class="stat-label">Leverage</div>
+                        <div class="stat-value">1:500</div>
+                    </div>
+                </div>
+                
+                <div class="account-actions">
+                    <button class="action-btn secondary" onclick="testConnection()">Test Connection</button>
+                    <button class="action-btn secondary" onclick="refreshAccount()">Refresh Data</button>
+                    <button class="action-btn danger" onclick="disconnectAccount()">Disconnect</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trading Settings -->
+        <div class="trading-settings">
+            <h3 class="section-subtitle">Trading Settings</h3>
+            
+            <div class="settings-grid">
+                <div class="setting-card">
+                    <div class="setting-header">
+                        <div class="setting-title">Risk Management</div>
+                        <div class="setting-status enabled">Enabled</div>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-item">
+                            <span class="setting-label">Max Risk per Trade:</span>
+                            <span class="setting-value">2%</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Max Daily Loss:</span>
+                            <span class="setting-value">5%</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Max Open Positions:</span>
+                            <span class="setting-value">3</span>
+                        </div>
+                    </div>
+                    <button class="setting-btn" onclick="editSettings('risk')">Modify</button>
+                </div>
+                
+                <div class="setting-card">
+                    <div class="setting-header">
+                        <div class="setting-title">Signal Execution</div>
+                        <div class="setting-status enabled">Auto</div>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-item">
+                            <span class="setting-label">Execution Mode:</span>
+                            <span class="setting-value">Automatic</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Slippage Tolerance:</span>
+                            <span class="setting-value">2 pips</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Min. Confidence:</span>
+                            <span class="setting-value">85%</span>
+                        </div>
+                    </div>
+                    <button class="setting-btn" onclick="editSettings('execution')">Modify</button>
+                </div>
+                
+                <div class="setting-card">
+                    <div class="setting-header">
+                        <div class="setting-title">Notifications</div>
+                        <div class="setting-status enabled">On</div>
+                    </div>
+                    <div class="setting-content">
+                        <div class="setting-item">
+                            <span class="setting-label">Trade Notifications:</span>
+                            <span class="setting-value">Enabled</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Error Alerts:</span>
+                            <span class="setting-value">Enabled</span>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">Daily Summary:</span>
+                            <span class="setting-value">Enabled</span>
+                        </div>
+                    </div>
+                    <button class="setting-btn" onclick="editSettings('notifications')">Modify</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="recent-activity">
+            <h3 class="section-subtitle">Recent MT5 Activity</h3>
+            
+            <div class="activity-list">
+                <div class="activity-item">
+                    <div class="activity-icon success">✓</div>
+                    <div class="activity-details">
+                        <div class="activity-title">Signal Executed</div>
+                        <div class="activity-description">EUR/USD BUY order placed successfully</div>
+                        <div class="activity-time">2 minutes ago</div>
+                    </div>
+                    <div class="activity-result success">+0.15 lots</div>
+                </div>
+                
+                <div class="activity-item">
+                    <div class="activity-icon success">✓</div>
+                    <div class="activity-details">
+                        <div class="activity-title">Position Closed</div>
+                        <div class="activity-description">GBP/USD position hit take profit</div>
+                        <div class="activity-time">1 hour ago</div>
+                    </div>
+                    <div class="activity-result success">+$187.50</div>
+                </div>
+                
+                <div class="activity-item">
+                    <div class="activity-icon info">ℹ️</div>
+                    <div class="activity-details">
+                        <div class="activity-title">Connection Check</div>
+                        <div class="activity-description">MT5 connection verified successfully</div>
+                        <div class="activity-time">3 hours ago</div>
+                    </div>
+                    <div class="activity-result info">OK</div>
+                </div>
+                
+                <div class="activity-item">
+                    <div class="activity-icon warning">⚠️</div>
+                    <div class="activity-details">
+                        <div class="activity-title">Risk Alert</div>
+                        <div class="activity-description">Daily loss limit approaching (3.2%)</div>
+                        <div class="activity-time">5 hours ago</div>
+                    </div>
+                    <div class="activity-result warning">Warning</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download Section -->
+        <div class="download-section">
+            <h3 class="section-subtitle">Download Expert Advisor</h3>
+            
+            <div class="download-card">
+                <div class="download-info">
+                    <div class="download-title">AI Cash-Revolution EA</div>
+                    <div class="download-description">Our custom Expert Advisor for seamless MT5 integration</div>
+                    <div class="download-features">
+                        <div class="feature">✓ Automatic signal execution</div>
+                        <div class="feature">✓ Built-in risk management</div>
+                        <div class="feature">✓ Real-time sync with platform</div>
+                        <div class="feature">✓ Detailed trade logging</div>
+                    </div>
+                </div>
+                <div class="download-actions">
+                    <button class="download-btn primary" onclick="downloadEA()">
+                        <span class="download-icon">⬇️</span>
+                        <span>Download EA</span>
+                    </button>
+                    <button class="download-btn secondary" onclick="showInstallGuide()">
+                        <span class="download-icon">📖</span>
+                        <span>Install Guide</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-container">
+            <a href="dashboard.html" class="bottom-nav-item">
+                <div class="bottom-nav-icon">📊</div>
+                <div class="bottom-nav-text">Dashboard</div>
+            </a>
+            <a href="signals.html" class="bottom-nav-item">
+                <div class="bottom-nav-icon">📡</div>
+                <div class="bottom-nav-text">Signals</div>
+            </a>
+            <a href="mt5-integration.html" class="bottom-nav-item active">
+                <div class="bottom-nav-icon">🔗</div>
+                <div class="bottom-nav-text">MT5</div>
+            </a>
+            <a href="profile.html" class="bottom-nav-item">
+                <div class="bottom-nav-icon">👤</div>
+                <div class="bottom-nav-text">Profile</div>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Scripts -->
+    <script src="static/js/matrix.js"></script>
+    <script src="static/js/main.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initMT5Page();
+            initMobileMenu();
+        });
+        
+        function initMT5Page() {
+            // Check if user is already connected (simulate with localStorage)
+            const isConnected = localStorage.getItem('mt5Connected') === 'true';
+            if (isConnected) {
+                showConnectedState();
+            }
+        }
+        
+        function showConnectionForm() {
+            const form = document.getElementById('connectionForm');
+            form.style.display = 'block';
+            form.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function connectAccount(event) {
+            event.preventDefault();
+            
+            // Simulate connection process
+            const submitBtn = event.target.querySelector('.form-submit');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.innerHTML = '<span class="submit-text">Connecting...</span>';
+            submitBtn.disabled = true;
+            
+            setTimeout(() => {
+                localStorage.setItem('mt5Connected', 'true');
+                showConnectedState();
+                hideConnectionForm();
+                showSuccessMessage('MT5 account connected successfully!');
+            }, 3000);
+        }
+        
+        function showConnectedState() {
+            const statusEl = document.getElementById('connectionStatus');
+            const connectedEl = document.getElementById('connectedAccount');
+            
+            // Update status
+            statusEl.className = 'integration-status connected';
+            statusEl.innerHTML = `
+                <div class="status-icon connected">✅</div>
+                <h2 class="status-title connected">Connected</h2>
+                <p class="status-description">Your MT5 account is successfully connected and ready to receive signals</p>
+            `;
+            
+            // Show connected account info
+            connectedEl.style.display = 'block';
+        }
+        
+        function hideConnectionForm() {
+            document.getElementById('connectionForm').style.display = 'none';
+        }
+        
+        function disconnectAccount() {
+            if (confirm('Are you sure you want to disconnect your MT5 account?')) {
+                localStorage.removeItem('mt5Connected');
+                location.reload();
+            }
+        }
+        
+        function testConnection() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
+            btn.textContent = 'Testing...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                showSuccessMessage('Connection test successful!');
+            }, 2000);
+        }
+        
+        function refreshAccount() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
+            btn.textContent = 'Refreshing...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                showSuccessMessage('Account data refreshed!');
+            }, 1500);
+        }
+        
+        function downloadEA() {
+            // Simulate file download
+            showSuccessMessage('EA download started! Check your downloads folder.');
+            
+            // In real implementation, would trigger actual file download
+            console.log('Downloading EA file...');
+        }
+        
+        function showInstallGuide() {
+            alert('Installation Guide:\n\n1. Download the EA file\n2. Copy to MetaTrader 5/MQL5/Experts folder\n3. Restart MT5\n4. Drag EA onto chart\n5. Enable auto-trading\n6. Configure settings');
+        }
+        
+        function editSettings(type) {
+            alert(`Opening ${type} settings editor...`);
+            // In real implementation, would open a settings modal
+        }
+        
+        function showSuccessMessage(message) {
+            // Simple success message (in real app, would use proper notification system)
+            const notification = document.createElement('div');
+            notification.className = 'success-notification';
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 100px;
+                right: 20px;
+                background: #00ff41;
+                color: #000;
+                padding: 15px 20px;
+                border-radius: 8px;
+                font-weight: 700;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        function initMobileMenu() {
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            const navLinks = document.querySelector('.nav-links');
+            
+            toggle?.addEventListener('click', () => {
+                toggle.classList.toggle('active');
+                navLinks.classList.toggle('mobile-open');
+            });
+        }
+    </script>
+
+    <!-- MT5 page specific styles -->
+    <style>
+        .mt5-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .setup-steps {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .steps-title {
+            color: #00ff41;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .steps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .step-item.completed {
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+        }
+        
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background: #333;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-family: 'Orbitron', monospace;
+        }
+        
+        .step-item.completed .step-number {
+            background: #00ff41;
+            color: #000;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 4px;
+        }
+        
+        .step-description {
+            font-size: 0.9rem;
+            color: #888;
+        }
+        
+        .step-btn {
+            background: linear-gradient(45deg, #00ff41, #00cc33);
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .step-btn.completed {
+            background: #00cc33;
+        }
+        
+        .step-btn:hover {
+            background: transparent;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+        }
+        
+        .connection-section {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff41;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .input-help {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+        
+        .connected-account {
+            margin-bottom: 30px;
+        }
+        
+        .account-card {
+            background: rgba(0, 255, 65, 0.1);
+            border: 2px solid #00ff41;
+            border-radius: 15px;
+            padding: 25px;
+        }
+        
+        .account-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .account-number {
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            color: #00ff41;
+            font-size: 1.1rem;
+        }
+        
+        .account-broker {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .connection-badge.connected {
+            background: #00ff41;
+            color: #000;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        
+        .account-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .account-stat {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+        }
+        
+        .account-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .trading-settings {
+            margin-bottom: 30px;
+        }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .setting-card {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .setting-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .setting-title {
+            font-weight: 600;
+            color: #00ff41;
+        }
+        
+        .setting-status.enabled {
+            background: rgba(0, 255, 65, 0.2);
+            color: #00ff41;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        
+        .setting-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .setting-btn {
+            background: transparent;
+            border: 2px solid #333;
+            color: #888;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .setting-btn:hover {
+            border-color: #00ff41;
+            color: #00ff41;
+        }
+        
+        .recent-activity {
+            margin-bottom: 30px;
+        }
+        
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #333;
+            border-radius: 10px;
+        }
+        
+        .activity-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        .activity-icon.success {
+            background: rgba(0, 255, 65, 0.2);
+        }
+        
+        .activity-icon.info {
+            background: rgba(0, 170, 255, 0.2);
+        }
+        
+        .activity-icon.warning {
+            background: rgba(255, 170, 0, 0.2);
+        }
+        
+        .activity-details {
+            flex: 1;
+        }
+        
+        .activity-title {
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 2px;
+        }
+        
+        .activity-description {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        
+        .activity-time {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .activity-result.success {
+            color: #00ff41;
+            font-weight: 700;
+        }
+        
+        .activity-result.info {
+            color: #00aaff;
+            font-weight: 700;
+        }
+        
+        .activity-result.warning {
+            color: #ffaa00;
+            font-weight: 700;
+        }
+        
+        .download-section {
+            margin-bottom: 100px;
+        }
+        
+        .download-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #333;
+            border-radius: 15px;
+            padding: 25px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .download-info {
+            flex: 1;
+        }
+        
+        .download-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            color: #00ff41;
+            margin-bottom: 8px;
+        }
+        
+        .download-description {
+            color: #b0b0b0;
+            margin-bottom: 15px;
+        }
+        
+        .download-features {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .feature {
+            font-size: 0.9rem;
+            color: #888;
+        }
+        
+        .download-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .download-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            justify-content: center;
+            border: 2px solid;
+        }
+        
+        .download-btn.primary {
+            background: linear-gradient(45deg, #00ff41, #00cc33);
+            color: #000;
+            border-color: #00ff41;
+        }
+        
+        .download-btn.primary:hover {
+            background: transparent;
+            color: #00ff41;
+        }
+        
+        .download-btn.secondary {
+            background: transparent;
+            color: #888;
+            border-color: #333;
+        }
+        
+        .download-btn.secondary:hover {
+            color: #00ff41;
+            border-color: #00ff41;
+        }
+        
+        /* Mobile responsive adjustments */
+        @media (min-width: 320px) {
+            .account-stats {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .account-actions {
+                flex-direction: column;
+            }
+            
+            .download-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .download-actions {
+                width: 100%;
+            }
+        }
+        
+        @media (min-width: 480px) {
+            .account-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .account-actions {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .settings-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .account-stats {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .download-card {
+                flex-direction: row;
+                text-align: left;
+            }
+            
+            .download-actions {
+                width: auto;
+            }
+            
+            .download-section {
+                margin-bottom: 40px;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .settings-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</body>
+</html>

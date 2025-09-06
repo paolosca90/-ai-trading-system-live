@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI Cash-Revolution Trading Signals - View all live and historical trading signals">
+    
+    <title>Trading Signals - AI Cash-Revolution</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Source+Code+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="static/css/styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+</head>
+<body class="app-layout">
+    <!-- Matrix Rain Canvas Background -->
+    <canvas id="matrix-rain"></canvas>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">AI Cash-Revolution</span>
+                <span class="logo-subtitle">Trading Matrix</span>
+            </div>
+            <div class="nav-links">
+                <a href="dashboard.html" class="nav-link">Dashboard</a>
+                <a href="signals.html" class="nav-link">Signals</a>
+                <a href="profile.html" class="nav-link">Account</a>
+                <a href="mt5-integration.html" class="nav-link">MT5</a>
+                <a href="index.html" class="nav-link">Home</a>
+            </div>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="app-container">
+        <div class="signals-header">
+            <h1 class="section-title">Trading <span class="matrix-text">Signals</span></h1>
+            <p class="section-subtitle">AI-powered signals with real-time market analysis</p>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="filter-controls">
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all">All Signals</button>
+                <button class="filter-tab" data-filter="live">Live</button>
+                <button class="filter-tab" data-filter="pending">Pending</button>
+                <button class="filter-tab" data-filter="completed">Completed</button>
+            </div>
+            
+            <div class="filter-options">
+                <select class="filter-select" id="pairFilter">
+                    <option value="">All Pairs</option>
+                    <option value="EURUSD">EUR/USD</option>
+                    <option value="GBPUSD">GBP/USD</option>
+                    <option value="USDJPY">USD/JPY</option>
+                    <option value="AUDUSD">AUD/USD</option>
+                    <option value="USDCAD">USD/CAD</option>
+                    <option value="EURGBP">EUR/GBP</option>
+                </select>
+                
+                <select class="filter-select" id="timeFilter">
+                    <option value="">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Signals List -->
+        <div class="signals-list" id="signalsList">
+            <!-- Live Signal -->
+            <div class="signal-item active" data-status="live" data-pair="EURUSD">
+                <div class="signal-meta">
+                    <div class="signal-pair">EUR/USD</div>
+                    <div class="signal-status live">LIVE</div>
+                </div>
+                
+                <div class="signal-header">
+                    <div class="signal-direction buy">BUY</div>
+                    <div class="signal-confidence">95% Confidence</div>
+                    <div class="signal-time">2 mins ago</div>
+                </div>
+                
+                <div class="signal-details">
+                    <div class="signal-detail">
+                        <div class="detail-label">Entry</div>
+                        <div class="detail-value">1.0847</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Stop Loss</div>
+                        <div class="detail-value danger">1.0820</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Take Profit</div>
+                        <div class="detail-value success">1.0890</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Risk/Reward</div>
+                        <div class="detail-value">1:1.59</div>
+                    </div>
+                </div>
+                
+                <div class="signal-analysis">
+                    <div class="analysis-title">AI Analysis:</div>
+                    <div class="analysis-text">Strong bullish momentum detected. ECB hawkish stance + USD weakness creating optimal long opportunity. Technical indicators align with fundamental drivers.</div>
+                </div>
+                
+                <div class="signal-actions">
+                    <button class="action-btn primary">Execute Now</button>
+                    <button class="action-btn secondary">Add to Watchlist</button>
+                </div>
+            </div>
+
+            <!-- Pending Signal -->
+            <div class="signal-item" data-status="pending" data-pair="GBPUSD">
+                <div class="signal-meta">
+                    <div class="signal-pair">GBP/USD</div>
+                    <div class="signal-status pending">PENDING</div>
+                </div>
+                
+                <div class="signal-header">
+                    <div class="signal-direction sell">SELL</div>
+                    <div class="signal-confidence">87% Confidence</div>
+                    <div class="signal-time">15 mins ago</div>
+                </div>
+                
+                <div class="signal-details">
+                    <div class="signal-detail">
+                        <div class="detail-label">Entry</div>
+                        <div class="detail-value">1.2620</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Stop Loss</div>
+                        <div class="detail-value danger">1.2650</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Take Profit</div>
+                        <div class="detail-value success">1.2570</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Risk/Reward</div>
+                        <div class="detail-value">1:1.67</div>
+                    </div>
+                </div>
+                
+                <div class="signal-analysis">
+                    <div class="analysis-title">AI Analysis:</div>
+                    <div class="analysis-text">Bearish divergence on 4H chart. UK economic concerns weighing on GBP. Waiting for price confirmation at resistance level.</div>
+                </div>
+                
+                <div class="signal-actions">
+                    <button class="action-btn primary">Set Alert</button>
+                    <button class="action-btn secondary">View Chart</button>
+                </div>
+            </div>
+
+            <!-- Running Signal -->
+            <div class="signal-item" data-status="running" data-pair="USDJPY">
+                <div class="signal-meta">
+                    <div class="signal-pair">USD/JPY</div>
+                    <div class="signal-status running">RUNNING</div>
+                </div>
+                
+                <div class="signal-header">
+                    <div class="signal-direction buy">BUY</div>
+                    <div class="signal-confidence">91% Confidence</div>
+                    <div class="signal-time">1 hour ago</div>
+                </div>
+                
+                <div class="signal-details">
+                    <div class="signal-detail">
+                        <div class="detail-label">Entry</div>
+                        <div class="detail-value">150.15</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Current</div>
+                        <div class="detail-value success">150.42</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">P&L</div>
+                        <div class="detail-value success">+27 pips</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Target</div>
+                        <div class="detail-value">150.65</div>
+                    </div>
+                </div>
+                
+                <div class="signal-analysis">
+                    <div class="analysis-title">Trade Update:</div>
+                    <div class="analysis-text">Trade moving in our favor. Price broke above resistance. Consider moving stop to breakeven to secure profits.</div>
+                </div>
+                
+                <div class="signal-actions">
+                    <button class="action-btn primary">Modify Order</button>
+                    <button class="action-btn secondary">Close Position</button>
+                </div>
+            </div>
+
+            <!-- Completed Signal -->
+            <div class="signal-item completed" data-status="completed" data-pair="AUDUSD">
+                <div class="signal-meta">
+                    <div class="signal-pair">AUD/USD</div>
+                    <div class="signal-status completed">COMPLETED</div>
+                </div>
+                
+                <div class="signal-header">
+                    <div class="signal-direction buy">BUY</div>
+                    <div class="signal-confidence">93% Confidence</div>
+                    <div class="signal-time">3 hours ago</div>
+                </div>
+                
+                <div class="signal-details">
+                    <div class="signal-detail">
+                        <div class="detail-label">Entry</div>
+                        <div class="detail-value">0.6753</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Exit</div>
+                        <div class="detail-value success">0.6789</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Result</div>
+                        <div class="detail-value success">+36 pips</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Duration</div>
+                        <div class="detail-value">2h 15m</div>
+                    </div>
+                </div>
+                
+                <div class="signal-analysis">
+                    <div class="analysis-title">Final Result:</div>
+                    <div class="analysis-text">Successful trade! RBA hawkish comments boosted AUD as predicted. Target hit exactly as forecasted by AI model.</div>
+                </div>
+            </div>
+
+            <!-- More completed signals -->
+            <div class="signal-item completed" data-status="completed" data-pair="EURGBP">
+                <div class="signal-meta">
+                    <div class="signal-pair">EUR/GBP</div>
+                    <div class="signal-status completed">COMPLETED</div>
+                </div>
+                
+                <div class="signal-header">
+                    <div class="signal-direction sell">SELL</div>
+                    <div class="signal-confidence">89% Confidence</div>
+                    <div class="signal-time">5 hours ago</div>
+                </div>
+                
+                <div class="signal-details">
+                    <div class="signal-detail">
+                        <div class="detail-label">Entry</div>
+                        <div class="detail-value">0.8642</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Exit</div>
+                        <div class="detail-value success">0.8598</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Result</div>
+                        <div class="detail-value success">+44 pips</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Duration</div>
+                        <div class="detail-value">1h 45m</div>
+                    </div>
+                </div>
+                
+                <div class="signal-analysis">
+                    <div class="analysis-title">Final Result:</div>
+                    <div class="analysis-text">Perfect execution! Brexit concerns materialized affecting GBP while EUR remained strong. AI prediction accuracy confirmed.</div>
+                </div>
+            </div>
+
+            <div class="signal-item completed" data-status="completed" data-pair="USDCAD">
+                <div class="signal-meta">
+                    <div class="signal-pair">USD/CAD</div>
+                    <div class="signal-status completed">COMPLETED</div>
+                </div>
+                
+                <div class="signal-header">
+                    <div class="signal-direction buy">BUY</div>
+                    <div class="signal-confidence">92% Confidence</div>
+                    <div class="signal-time">8 hours ago</div>
+                </div>
+                
+                <div class="signal-details">
+                    <div class="signal-detail">
+                        <div class="detail-label">Entry</div>
+                        <div class="detail-value">1.3547</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Exit</div>
+                        <div class="detail-value success">1.3589</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Result</div>
+                        <div class="detail-value success">+42 pips</div>
+                    </div>
+                    <div class="signal-detail">
+                        <div class="detail-label">Duration</div>
+                        <div class="detail-value">4h 20m</div>
+                    </div>
+                </div>
+                
+                <div class="signal-analysis">
+                    <div class="analysis-title">Final Result:</div>
+                    <div class="analysis-text">Excellent trade! Oil price decline weakened CAD as anticipated. Fed policy expectations supported USD strength throughout.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load More Button -->
+        <div class="load-more-section">
+            <button class="load-more-btn">Load More Signals</button>
+            <div class="signals-summary">
+                Showing 6 of 847 signals • Win Rate: <span class="success">94.7%</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="bottom-nav">
+        <div class="bottom-nav-container">
+            <a href="dashboard.html" class="bottom-nav-item">
+                <div class="bottom-nav-icon">📊</div>
+                <div class="bottom-nav-text">Dashboard</div>
+            </a>
+            <a href="signals.html" class="bottom-nav-item active">
+                <div class="bottom-nav-icon">📡</div>
+                <div class="bottom-nav-text">Signals</div>
+            </a>
+            <a href="mt5-integration.html" class="bottom-nav-item">
+                <div class="bottom-nav-icon">🔗</div>
+                <div class="bottom-nav-text">MT5</div>
+            </a>
+            <a href="profile.html" class="bottom-nav-item">
+                <div class="bottom-nav-icon">👤</div>
+                <div class="bottom-nav-text">Profile</div>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Scripts -->
+    <script src="static/js/matrix.js"></script>
+    <script src="static/js/main.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initSignalsPage();
+            initMobileMenu();
+        });
+        
+        function initSignalsPage() {
+            // Filter functionality
+            const filterTabs = document.querySelectorAll('.filter-tab');
+            const signalsList = document.getElementById('signalsList');
+            const pairFilter = document.getElementById('pairFilter');
+            const timeFilter = document.getElementById('timeFilter');
+            
+            // Tab filtering
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    const filter = tab.dataset.filter;
+                    filterSignals(filter, pairFilter.value, timeFilter.value);
+                });
+            });
+            
+            // Dropdown filtering
+            pairFilter.addEventListener('change', () => {
+                const activeTab = document.querySelector('.filter-tab.active');
+                filterSignals(activeTab.dataset.filter, pairFilter.value, timeFilter.value);
+            });
+            
+            timeFilter.addEventListener('change', () => {
+                const activeTab = document.querySelector('.filter-tab.active');
+                filterSignals(activeTab.dataset.filter, pairFilter.value, timeFilter.value);
+            });
+            
+            // Load more functionality
+            const loadMoreBtn = document.querySelector('.load-more-btn');
+            loadMoreBtn.addEventListener('click', loadMoreSignals);
+            
+            // Auto-refresh live signals
+            setInterval(refreshLiveSignals, 30000);
+        }
+        
+        function filterSignals(status, pair, time) {
+            const signals = document.querySelectorAll('.signal-item');
+            
+            signals.forEach(signal => {
+                let show = true;
+                
+                // Status filter
+                if (status !== 'all' && !signal.dataset.status.includes(status) && status !== 'running') {
+                    show = false;
+                }
+                
+                // Handle running status (live + running)
+                if (status === 'live' && !['live', 'running'].includes(signal.dataset.status)) {
+                    show = false;
+                }
+                
+                // Pair filter
+                if (pair && !signal.dataset.pair.includes(pair.replace('/', ''))) {
+                    show = false;
+                }
+                
+                // Time filter would be implemented with actual timestamps
+                
+                signal.style.display = show ? 'block' : 'none';
+            });
+            
+            updateSignalsCount();
+        }
+        
+        function updateSignalsCount() {
+            const visible = document.querySelectorAll('.signal-item[style="block"], .signal-item:not([style])').length;
+            const summary = document.querySelector('.signals-summary');
+            if (summary) {
+                summary.innerHTML = `Showing ${visible} signals • Win Rate: <span class="success">94.7%</span>`;
+            }
+        }
+        
+        function loadMoreSignals() {
+            // Simulate loading more signals
+            const loadMoreBtn = document.querySelector('.load-more-btn');
+            loadMoreBtn.textContent = 'Loading...';
+            loadMoreBtn.disabled = true;
+            
+            setTimeout(() => {
+                loadMoreBtn.textContent = 'Load More Signals';
+                loadMoreBtn.disabled = false;
+                // In real implementation, would append new signals
+            }, 1500);
+        }
+        
+        function refreshLiveSignals() {
+            console.log('Refreshing live signals...');
+            // In real implementation, would update live signal data
+            
+            // Update live signal time stamps
+            const liveSignals = document.querySelectorAll('.signal-item[data-status="live"] .signal-time');
+            liveSignals.forEach(timeEl => {
+                const currentText = timeEl.textContent;
+                if (currentText.includes('mins ago')) {
+                    const mins = parseInt(currentText.match(/\d+/)[0]) + 1;
+                    timeEl.textContent = `${mins} mins ago`;
+                }
+            });
+        }
+        
+        function initMobileMenu() {
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            const navLinks = document.querySelector('.nav-links');
+            
+            toggle?.addEventListener('click', () => {
+                toggle.classList.toggle('active');
+                navLinks.classList.toggle('mobile-open');
+            });
+        }
+    </script>
+
+    <!-- Signals page specific styles -->
+    <style>
+        .signals-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .filter-controls {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #333;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+        
+        .filter-tab {
+            background: transparent;
+            border: 2px solid #333;
+            color: #888;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            min-height: 44px;
+        }
+        
+        .filter-tab.active,
+        .filter-tab:hover {
+            border-color: #00ff41;
+            color: #00ff41;
+            background: rgba(0, 255, 65, 0.1);
+        }
+        
+        .filter-options {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .filter-select {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            min-height: 44px;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: #00ff41;
+        }
+        
+        .signal-analysis {
+            margin: 15px 0;
+            padding: 12px;
+            background: rgba(0, 255, 65, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid #00ff41;
+        }
+        
+        .analysis-title {
+            font-weight: 700;
+            color: #00ff41;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .analysis-text {
+            color: #e0e0e0;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+        
+        .signal-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .signal-confidence {
+            background: rgba(0, 255, 65, 0.2);
+            color: #00ff41;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        
+        .signal-status.running {
+            background: #00aaff;
+            color: #000;
+        }
+        
+        .load-more-section {
+            text-align: center;
+            margin: 40px 0 100px;
+        }
+        
+        .load-more-btn {
+            background: linear-gradient(45deg, #00ff41, #00cc33);
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+            min-height: 44px;
+        }
+        
+        .load-more-btn:hover {
+            background: transparent;
+            color: #00ff41;
+            border: 2px solid #00ff41;
+        }
+        
+        .load-more-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .signals-summary {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .success {
+            color: #00ff41;
+            font-weight: 700;
+        }
+        
+        /* Mobile specific adjustments */
+        @media (min-width: 320px) {
+            .filter-options {
+                flex-direction: column;
+            }
+            
+            .signal-actions {
+                flex-direction: column;
+            }
+            
+            .action-btn.primary,
+            .action-btn.secondary {
+                width: 100%;
+            }
+        }
+        
+        @media (min-width: 480px) {
+            .filter-options {
+                flex-direction: row;
+            }
+            
+            .signal-actions {
+                flex-direction: row;
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .filter-tabs {
+                justify-content: center;
+            }
+            
+            .load-more-section {
+                margin-bottom: 40px;
+            }
+        }
+    </style>
+</body>
+</html>

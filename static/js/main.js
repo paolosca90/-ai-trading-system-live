@@ -1,0 +1,972 @@
+// ===== Main JavaScript for AI Cash-Revolution Landing Page =====
+
+// API Integration for Trial Signup
+async function submitTrialForm(formData) {
+    try {
+        const response = await fetch(CONFIG.API_BASE_URL + '/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                username: formData.get('fullName').toLowerCase().replace(/\s+/g, ''),
+                email: formData.get('email'),
+                password: 'temp_' + Math.random().toString(36).substr(2, 9), // Temporary password
+                full_name: formData.get('fullName'),
+                phone: formData.get('phone'),
+                trading_experience: formData.get('experience')
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.detail || 'Registration failed');
+        }
+        
+        return {
+            success: true,
+            message: 'Registrazione completata! Controlla la tua email per le credenziali.',
+            data: data
+        };
+        
+    } catch (error) {
+        console.error('Registration error:', error);
+        return {
+            success: false,
+            message: error.message || 'Errore durante la registrazione. Riprova.'
+        };
+    }
+}
+
+// Load live statistics from backend
+async function loadLiveStats() {
+    try {
+        // Get top signals for social proof
+        const topSignalsResponse = await fetch(CONFIG.API_BASE_URL + '/signals/top', {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (topSignalsResponse.ok) {
+            const signals = await topSignalsResponse.json();
+            updateLiveStats(signals);
+        }
+        
+    } catch (error) {
+        console.warn('Could not load live stats:', error);
+        // Use fallback static data if API is not available
+    }
+}
+
+function updateLiveStats(signals) {
+    // Update the hero statistics with real data
+    const statsElements = document.querySelectorAll('.stat-number');
+    if (signals && signals.length > 0) {
+        // Calculate real statistics from signals
+        const totalSignals = signals.length;
+        const avgReliability = signals.reduce((sum, signal) => sum + signal.reliability, 0) / signals.length;
+        
+        // Update DOM elements
+        statsElements.forEach(el => {
+            const target = el.getAttribute('data-target');
+            if (target === '95') {
+                el.setAttribute('data-target', Math.round(avgReliability).toString());
+            }
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // ===== Navigation Functions =====
+    const navbar = document.querySelector('.navbar');
+    const mobileToggle = document.querySelector('.mobile-menu-toggle');
+    const navLinks = document.querySelector('.nav-links');
+    
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 100) {
+            navbar.style.background = 'rgba(0, 0, 0, 0.98)';
+            navbar.style.boxShadow = '0 2px 20px rgba(0, 255, 65, 0.3)';
+        } else {
+            navbar.style.background = 'rgba(0, 0, 0, 0.95)';
+            navbar.style.boxShadow = 'none';
+        }
+    });
+    
+    // Mobile menu toggle - Enhanced for all pages
+    if (mobileToggle && navLinks) {
+        mobileToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navLinks.classList.toggle('mobile-open');
+            mobileToggle.classList.toggle('active');
+            
+            // Prevent body scroll when menu is open
+            if (navLinks.classList.contains('mobile-open')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (navLinks.classList.contains('mobile-open') && 
+                !navLinks.contains(e.target) && 
+                !mobileToggle.contains(e.target)) {
+                navLinks.classList.remove('mobile-open');
+                mobileToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+        
+        // Close menu on window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 1024) {
+                navLinks.classList.remove('mobile-open');
+                mobileToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+        
+        // Close menu when pressing escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && navLinks.classList.contains('mobile-open')) {
+                navLinks.classList.remove('mobile-open');
+                mobileToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    }
+    
+    // Smooth scrolling for navigation links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                const offsetTop = target.offsetTop - 80;
+                window.scrollTo({
+                    top: offsetTop,
+                    behavior: 'smooth'
+                });
+                
+                // Close mobile menu if open
+                if (navLinks.classList.contains('mobile-open')) {
+                    navLinks.classList.remove('mobile-open');
+                    mobileToggle.classList.remove('active');
+                }
+            }
+        });
+    });
+    
+    // ===== Hero Section Animations =====
+    const heroStats = document.querySelectorAll('.stat-number[data-target]');
+    const observerOptions = {
+        threshold: 0.5,
+        once: true
+    };
+    
+    // ===== Trading Dashboard Simulation =====
+    const tradingDashboard = document.querySelector('.trading-dashboard');
+    if (tradingDashboard) {
+        simulateTradingActivity();
+    }
+    
+    function simulateTradingActivity() {
+        const pairs = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD', 'NZD/USD'];
+        const directions = ['BUY', 'SELL'];
+        const confidenceRange = [85, 99];
+        
+        const signalPair = document.querySelector('.signal-pair');
+        const signalDirection = document.querySelector('.signal-direction');
+        const signalConfidence = document.querySelector('.signal-confidence');
+        const signalReason = document.querySelector('.signal-ai-reason');
+        
+        const reasons = [
+            'Strong bullish momentum detected. Fed dovish stance + ECB hawkish signals = EUR strength.',
+            'Bearish reversal pattern confirmed. Technical indicators align with fundamental weakness.',
+            'Breaking key resistance level. Volume spike confirms institutional buying pressure.',
+            'Risk-off sentiment driving safe haven demand. Multiple timeframe alignment detected.',
+            'Central bank intervention probability high. News sentiment analysis shows 90% negative.',
+            'Golden cross formation on 4H chart. RSI divergence suggests trend continuation.'
+        ];
+        
+        function updateSignal() {
+            const pair = pairs[Math.floor(Math.random() * pairs.length)];
+            const direction = directions[Math.floor(Math.random() * directions.length)];
+            const confidence = Math.floor(Math.random() * (confidenceRange[1] - confidenceRange[0] + 1)) + confidenceRange[0];
+            const reason = reasons[Math.floor(Math.random() * reasons.length)];
+            
+            // Update with glitch effect
+            if (signalPair) {
+                window.MatrixEffects.GlitchEffect.apply(signalPair);
+                setTimeout(() => signalPair.textContent = pair, 200);
+            }
+            
+            if (signalDirection) {
+                signalDirection.className = `signal-direction ${direction.toLowerCase()}`;
+                setTimeout(() => signalDirection.textContent = direction, 200);
+            }
+            
+            if (signalConfidence) {
+                setTimeout(() => signalConfidence.textContent = `${confidence}% Confidence`, 200);
+            }
+            
+            if (signalReason) {
+                setTimeout(() => signalReason.textContent = `AI Analysis: ${reason}`, 200);
+            }
+        }
+        
+        // Update signal every 10 seconds
+        setInterval(updateSignal, 10000);
+    }
+    
+    // ===== FAQ Accordion =====
+    const faqItems = document.querySelectorAll('.faq-item');
+    
+    faqItems.forEach(item => {
+        const question = item.querySelector('.faq-question');
+        const answer = item.querySelector('.faq-answer');
+        
+        question.addEventListener('click', () => {
+            const isActive = item.classList.contains('active');
+            
+            // Close all other FAQ items
+            faqItems.forEach(otherItem => {
+                if (otherItem !== item) {
+                    otherItem.classList.remove('active');
+                }
+            });
+            
+            // Toggle current item
+            if (isActive) {
+                item.classList.remove('active');
+            } else {
+                item.classList.add('active');
+            }
+        });
+    });
+    
+    // ===== Form Handling =====
+    const signupForm = document.getElementById('trial-signup-form');
+    
+    if (signupForm) {
+        signupForm.addEventListener('submit', handleFormSubmission);
+    }
+    
+    async function handleFormSubmission(e) {
+        e.preventDefault();
+        
+        const submitButton = signupForm.querySelector('.form-submit');
+        const originalText = submitButton.querySelector('.submit-text').textContent;
+        
+        // Show loading state
+        submitButton.classList.add('loading');
+        submitButton.querySelector('.submit-text').textContent = 'Processing...';
+        submitButton.disabled = true;
+        
+        // Collect form data
+        const formData = new FormData(signupForm);
+        const data = {
+            username: formData.get('fullName').toLowerCase().replace(/\s+/g, ''),
+            email: formData.get('email'),
+            password: 'temp_' + Math.random().toString(36).substr(2, 9), // Temporary password
+            full_name: formData.get('fullName'),
+            phone: formData.get('phone'),
+            trading_experience: formData.get('experience')
+        };
+        
+        try {
+            // Call the actual FastAPI endpoint using the backend URL
+            const response = await fetch(CONFIG.API_BASE_URL + '/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                showSuccessMessage(result.message);
+                signupForm.reset();
+                
+                // Track conversion
+                trackConversion('trial_signup', data.email);
+            } else {
+                const errorResult = await response.json();
+                throw new Error(errorResult.message || 'Registration failed');
+            }
+            
+        } catch (error) {
+            console.error('Form submission error:', error);
+            showErrorMessage();
+        } finally {
+            // Reset button state
+            submitButton.classList.remove('loading');
+            submitButton.querySelector('.submit-text').textContent = originalText;
+            submitButton.disabled = false;
+        }
+    }
+    
+    function showSuccessMessage(customMessage) {
+        const message = document.createElement('div');
+        message.className = 'success-message';
+        message.innerHTML = `
+            <div class="message-content">
+                <div class="message-icon">✓</div>
+                <div class="message-text">
+                    <h3>Welcome to the Matrix!</h3>
+                    <p>${customMessage || 'Check your email for setup instructions. You\'ll be receiving signals within 60 seconds.'}</p>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(message);
+        
+        setTimeout(() => {
+            message.style.opacity = '0';
+            setTimeout(() => message.remove(), 300);
+        }, 5000);
+        
+        // Add success message styles
+        addSuccessMessageStyles();
+    }
+    
+    function showErrorMessage() {
+        const message = document.createElement('div');
+        message.className = 'error-message';
+        message.innerHTML = `
+            <div class="message-content">
+                <div class="message-icon">⚠</div>
+                <div class="message-text">
+                    <h3>Registration Failed</h3>
+                    <p>Please try again or contact support if the problem persists.</p>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(message);
+        
+        setTimeout(() => {
+            message.style.opacity = '0';
+            setTimeout(() => message.remove(), 300);
+        }, 5000);
+        
+        addErrorMessageStyles();
+    }
+    
+    function addSuccessMessageStyles() {
+        if (document.querySelector('#success-message-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'success-message-styles';
+        style.textContent = `
+            .success-message, .error-message {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 10000;
+                background: rgba(0, 0, 0, 0.95);
+                border: 2px solid #00ff41;
+                border-radius: 15px;
+                padding: 20px;
+                max-width: 400px;
+                opacity: 1;
+                transition: all 0.3s ease;
+                backdrop-filter: blur(10px);
+                animation: slideIn 0.3s ease;
+            }
+            
+            .error-message {
+                border-color: #ff4040;
+            }
+            
+            .message-content {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            .message-icon {
+                font-size: 2rem;
+                color: #00ff41;
+            }
+            
+            .error-message .message-icon {
+                color: #ff4040;
+            }
+            
+            .message-text h3 {
+                margin: 0 0 5px 0;
+                color: #00ff41;
+                font-size: 1.1rem;
+            }
+            
+            .error-message .message-text h3 {
+                color: #ff4040;
+            }
+            
+            .message-text p {
+                margin: 0;
+                color: #e0e0e0;
+                font-size: 0.9rem;
+                line-height: 1.4;
+            }
+            
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    function addErrorMessageStyles() {
+        addSuccessMessageStyles(); // Uses same styles
+    }
+    
+    // ===== Conversion Tracking =====
+    function trackConversion(event, userEmail) {
+        // Google Analytics
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'conversion', {
+                send_to: 'AW-CONVERSION_ID/CONVERSION_LABEL',
+                event_category: 'signup',
+                event_label: event
+            });
+        }
+        
+        // Facebook Pixel
+        if (typeof fbq !== 'undefined') {
+            fbq('track', 'Lead', {
+                content_name: 'Free Trial Signup',
+                content_category: 'Trading Signals'
+            });
+        }
+        
+        // Custom tracking
+        console.log('Conversion tracked:', event, userEmail);
+    }
+    
+    // ===== Scroll Animations =====
+    const observeElements = document.querySelectorAll('.feature-card, .testimonial, .proof-card, .pricing-card');
+    
+    const scrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+                
+                // Add Matrix text effect to titles
+                const title = entry.target.querySelector('h3, .feature-title, .testimonial h3');
+                if (title && title.classList.contains('matrix-text')) {
+                    window.MatrixEffects.GlitchEffect.apply(title);
+                }
+            }
+        });
+    }, {
+        threshold: 0.1,
+        rootMargin: '50px'
+    });
+    
+    observeElements.forEach(element => {
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(20px)';
+        element.style.transition = 'all 0.6s ease';
+        scrollObserver.observe(element);
+    });
+    
+    // ===== Live Data Updates =====
+    async function fetchLiveStats() {
+        try {
+            const response = await fetch('/api/landing/stats');
+            if (response.ok) {
+                const stats = await response.json();
+                updateStatNumbers(stats);
+            }
+        } catch (error) {
+            console.log('Using fallback stats:', error);
+        }
+    }
+    
+    async function fetchRecentSignals() {
+        try {
+            const response = await fetch('/api/landing/recent-signals');
+            if (response.ok) {
+                const data = await response.json();
+                updateRecentSignals(data.signals);
+            }
+        } catch (error) {
+            console.log('Using fallback signals:', error);
+        }
+    }
+    
+    function updateStatNumbers(stats) {
+        // Update hero stats
+        const activeTraders = document.querySelector('[data-target="10000"]');
+        const accuracyRate = document.querySelector('[data-target="95"]');
+        
+        if (activeTraders) {
+            activeTraders.setAttribute('data-target', stats.active_traders);
+            activeTraders.textContent = stats.active_traders.toLocaleString();
+        }
+        
+        if (accuracyRate) {
+            accuracyRate.setAttribute('data-target', Math.round(stats.success_rate));
+            accuracyRate.textContent = Math.round(stats.success_rate);
+        }
+        
+        // Update proof section
+        const totalProfits = document.querySelector('.proof-number');
+        if (totalProfits && totalProfits.textContent.includes('$')) {
+            totalProfits.textContent = `$${(stats.total_profits / 1000000).toFixed(1)}M+`;
+        }
+    }
+    
+    function updateRecentSignals(signals) {
+        const storyElements = document.querySelectorAll('.success-stories .story');
+        
+        signals.forEach((signal, index) => {
+            if (index < storyElements.length) {
+                const story = storyElements[index];
+                const pair = story.querySelector('.pair');
+                const direction = story.querySelector('.direction');
+                const profit = story.querySelector('.profit.success');
+                const time = story.querySelector('.story-time');
+                
+                if (pair) pair.textContent = signal.pair;
+                if (direction) {
+                    direction.textContent = signal.direction;
+                    direction.className = `direction ${signal.direction.toLowerCase()}`;
+                }
+                if (profit) profit.textContent = `+${signal.profit_pips} pips`;
+                if (time) {
+                    const timeText = signal.hours_ago === 1 ? '1 hour ago' : `${signal.hours_ago} hours ago`;
+                    time.textContent = timeText;
+                }
+            }
+        });
+    }
+    
+    // Initial fetch and setup periodic updates
+    fetchLiveStats();
+    fetchRecentSignals();
+    
+    // Update every 2 minutes
+    setInterval(() => {
+        fetchLiveStats();
+        fetchRecentSignals();
+    }, 120000);
+    
+    // ===== Pricing Card Interactions =====
+    const pricingCards = document.querySelectorAll('.pricing-card');
+    
+    pricingCards.forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            const title = card.querySelector('.card-title');
+            if (title) {
+                window.MatrixEffects.GlitchEffect.apply(title);
+            }
+        });
+    });
+    
+    // ===== CTA Button Effects =====
+    const ctaButtons = document.querySelectorAll('.cta-button, .card-cta');
+    
+    ctaButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(0, 255, 65, 0.4);
+                border-radius: 50%;
+                pointer-events: none;
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+            `;
+            
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+    
+    // Add ripple animation styles
+    const rippleStyle = document.createElement('style');
+    rippleStyle.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(rippleStyle);
+    
+    // ===== Form Validation =====
+    const formInputs = document.querySelectorAll('.signup-form input, .signup-form select');
+    
+    formInputs.forEach(input => {
+        input.addEventListener('blur', validateField);
+        input.addEventListener('input', clearFieldError);
+    });
+    
+    function validateField(e) {
+        const field = e.target;
+        const value = field.value.trim();
+        const fieldType = field.type || field.tagName.toLowerCase();
+        
+        clearFieldError(e);
+        
+        if (!value) {
+            showFieldError(field, 'This field is required');
+            return false;
+        }
+        
+        switch (fieldType) {
+            case 'email':
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value)) {
+                    showFieldError(field, 'Please enter a valid email address');
+                    return false;
+                }
+                break;
+                
+            case 'tel':
+                const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+                if (!phoneRegex.test(value.replace(/\s/g, ''))) {
+                    showFieldError(field, 'Please enter a valid phone number');
+                    return false;
+                }
+                break;
+        }
+        
+        return true;
+    }
+    
+    function showFieldError(field, message) {
+        field.style.borderColor = '#ff4040';
+        
+        let errorElement = field.parentNode.querySelector('.field-error');
+        if (!errorElement) {
+            errorElement = document.createElement('div');
+            errorElement.className = 'field-error';
+            errorElement.style.cssText = `
+                color: #ff4040;
+                font-size: 0.8rem;
+                margin-top: 5px;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            field.parentNode.appendChild(errorElement);
+        }
+        
+        errorElement.textContent = message;
+        setTimeout(() => errorElement.style.opacity = '1', 10);
+    }
+    
+    function clearFieldError(e) {
+        const field = e.target;
+        field.style.borderColor = '#333';
+        
+        const errorElement = field.parentNode.querySelector('.field-error');
+        if (errorElement) {
+            errorElement.style.opacity = '0';
+            setTimeout(() => errorElement.remove(), 300);
+        }
+    }
+    
+    // ===== Performance Monitoring =====
+    function monitorPerformance() {
+        // Monitor Core Web Vitals
+        if ('PerformanceObserver' in window) {
+            const observer = new PerformanceObserver((list) => {
+                list.getEntries().forEach((entry) => {
+                    console.log(`${entry.name}: ${entry.value}ms`);
+                });
+            });
+            
+            observer.observe({ entryTypes: ['measure', 'navigation'] });
+        }
+        
+        // Track page load time
+        window.addEventListener('load', () => {
+            const loadTime = performance.now();
+            console.log(`Page loaded in ${loadTime}ms`);
+            
+            // Track with analytics if available
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'timing_complete', {
+                    name: 'load',
+                    value: Math.round(loadTime)
+                });
+            }
+        });
+    }
+    
+    monitorPerformance();
+    
+    // ===== Initialize all features =====
+    console.log('AI Cash-Revolution landing page initialized');
+});
+
+// ===== Utility Functions =====
+const utils = {
+    debounce: function(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    },
+    
+    throttle: function(func, limit) {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    },
+    
+    formatNumber: function(num) {
+        return new Intl.NumberFormat().format(num);
+    },
+    
+    formatCurrency: function(amount, currency = 'USD') {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency
+        }).format(amount);
+    }
+};
+
+// ===== Mobile-Specific Functions =====
+const MobileUtils = {
+    // Detect if user is on mobile device
+    isMobile: function() {
+        return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    },
+    
+    // Get touch coordinates
+    getTouchCoordinates: function(e) {
+        const touch = e.touches[0] || e.changedTouches[0];
+        return {
+            x: touch.clientX,
+            y: touch.clientY
+        };
+    },
+    
+    // Handle touch events for better mobile interaction
+    addTouchHandlers: function(element, callbacks) {
+        let touchStartTime = 0;
+        let touchStartPos = { x: 0, y: 0 };
+        
+        element.addEventListener('touchstart', (e) => {
+            touchStartTime = Date.now();
+            const coords = this.getTouchCoordinates(e);
+            touchStartPos = coords;
+            if (callbacks.onTouchStart) callbacks.onTouchStart(e, coords);
+        }, { passive: true });
+        
+        element.addEventListener('touchend', (e) => {
+            const touchDuration = Date.now() - touchStartTime;
+            const coords = this.getTouchCoordinates(e);
+            
+            // Determine if it's a tap or swipe
+            const distance = Math.sqrt(
+                Math.pow(coords.x - touchStartPos.x, 2) + 
+                Math.pow(coords.y - touchStartPos.y, 2)
+            );
+            
+            if (touchDuration < 300 && distance < 10) {
+                if (callbacks.onTap) callbacks.onTap(e, coords);
+            } else if (distance > 50) {
+                const direction = this.getSwipeDirection(touchStartPos, coords);
+                if (callbacks.onSwipe) callbacks.onSwipe(e, direction, distance);
+            }
+            
+            if (callbacks.onTouchEnd) callbacks.onTouchEnd(e, coords);
+        }, { passive: true });
+    },
+    
+    // Get swipe direction
+    getSwipeDirection: function(start, end) {
+        const deltaX = end.x - start.x;
+        const deltaY = end.y - start.y;
+        
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            return deltaX > 0 ? 'right' : 'left';
+        } else {
+            return deltaY > 0 ? 'down' : 'up';
+        }
+    },
+    
+    // Optimize for mobile viewport
+    optimizeViewport: function() {
+        // Prevent zoom on double tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+        
+        // Handle orientation change
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                // Fix viewport scaling issues on orientation change
+                const viewport = document.querySelector('meta[name=viewport]');
+                if (viewport) {
+                    viewport.content = viewport.content;
+                }
+            }, 500);
+        });
+    },
+    
+    // Show/hide mobile-specific UI elements
+    adaptUIForMobile: function() {
+        const isMobile = this.isMobile();
+        
+        // Toggle mobile-specific classes
+        document.body.classList.toggle('mobile-device', isMobile);
+        
+        // Adjust button sizes for touch
+        if (isMobile) {
+            const buttons = document.querySelectorAll('button, .btn, .cta-button');
+            buttons.forEach(btn => {
+                const style = window.getComputedStyle(btn);
+                const height = parseInt(style.height);
+                if (height < 44) {
+                    btn.style.minHeight = '44px';
+                    btn.style.padding = '12px 16px';
+                }
+            });
+        }
+    }
+};
+
+// Initialize mobile optimizations
+if (MobileUtils.isMobile()) {
+    MobileUtils.optimizeViewport();
+    MobileUtils.adaptUIForMobile();
+}
+
+// ===== Export for global use =====
+window.AILandingPage = {
+    utils,
+    MobileUtils,
+    trackConversion: function(event, userEmail) {
+        // Public method for tracking conversions
+        trackConversion(event, userEmail);
+    },
+    
+    // Global mobile navigation handler
+    initMobileNav: function() {
+        const toggle = document.querySelector('.mobile-menu-toggle');
+        const navLinks = document.querySelector('.nav-links');
+        
+        if (toggle && navLinks) {
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navLinks.classList.toggle('mobile-open');
+                toggle.classList.toggle('active');
+                
+                if (navLinks.classList.contains('mobile-open')) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            });
+            
+            // Close on outside click
+            document.addEventListener('click', (e) => {
+                if (navLinks.classList.contains('mobile-open') && 
+                    !navLinks.contains(e.target) && 
+                    !toggle.contains(e.target)) {
+                    navLinks.classList.remove('mobile-open');
+                    toggle.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+            
+            // Close on escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && navLinks.classList.contains('mobile-open')) {
+                    navLinks.classList.remove('mobile-open');
+                    toggle.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+        }
+    }
+    
+    // Load live statistics from backend
+    async function loadLiveStatistics() {
+        try {
+            const response = await fetch(CONFIG.API_BASE_URL + '/signals/top', {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const signals = await response.json();
+                if (signals && signals.length > 0) {
+                    // Calculate average reliability
+                    const avgReliability = signals.reduce((sum, signal) => sum + signal.reliability, 0) / signals.length;
+                    
+                    // Update the accuracy stat
+                    const accuracyStat = document.querySelector('[data-target="95"]');
+                    if (accuracyStat) {
+                        accuracyStat.setAttribute('data-target', Math.round(avgReliability).toString());
+                        accuracyStat.textContent = Math.round(avgReliability).toString();
+                    }
+                    
+                    console.log('Live stats loaded successfully:', {
+                        totalSignals: signals.length,
+                        avgReliability: Math.round(avgReliability)
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn('Could not load live stats, using static data:', error);
+        }
+    }
+    
+    // Load live statistics when page loads
+    loadLiveStatistics();
+};

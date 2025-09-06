@@ -1,0 +1,50 @@
+{
+  "Id": "AZY0H_vHM0igF7qqAEF0tA",
+  "LastFriendlyName": "[Manual] ai.cash-revolution.com",
+  "PfxPasswordProtected": "enc-AQAAANCMnd8BFdERjHoAwE/Cl\u002BsBAAAA6uXijCGcHESnqhlN1IgVFwQAAAACAAAAAAAQZgAAAAEAACAAAAB7GzEFTnXmTU69kaVNCWBvJKBxF0QtftDPjkHLQhEvbQAAAAAOgAAAAAIAACAAAADi3uQvR28qm9165dep2XtqhmB/qHP8us/bQekeK9yLrTAAAAAmH7DyZXAGI/DhTG7hcrLOg5I3e9MP8KqAt6TkujB28YreT/47To7JKauciXahmUdAAAAA6j053p61atHYWh7IjScl5d2xgUIAHtHKa\u002BJUcjWgHOoJpxC/XBGeDDmRaNA43iIm4\u002BeiLy/yIK5x3y1yhP6Twg==",
+  "TargetPluginOptions": {
+    "CommonName": "ai.cash-revolution.com",
+    "AlternativeNames": [
+      "ai.cash-revolution.com"
+    ],
+    "Plugin": "e239db3b-b42f-48aa-b64f-46d4f3e9941b"
+  },
+  "ValidationPluginOptions": {
+    "Path": "C:/nginx/acme",
+    "CopyWebConfig": false,
+    "Plugin": "1c77b3a4-5310-4c46-92c6-00d866e84d6b"
+  },
+  "CsrPluginOptions": {
+    "Plugin": "b9060d4b-c2d3-49ac-b37f-962e7c3cbe9d"
+  },
+  "OrderPluginOptions": {
+    "Plugin": "b705fa7c-1152-4436-8913-e433d7f84c82"
+  },
+  "StorePluginOptions": [
+    {
+      "Path": "C:/nginx/certs",
+      "FileName": "ai.cash-revolution.com",
+      "PfxPassword": null,
+      "Plugin": "2a2c576f-7637-4ade-b8db-e8613b0bb33e"
+    }
+  ],
+  "InstallationPluginOptions": [
+    {
+      "Plugin": "aecc502c-5f75-43d2-b578-f95d50c79ea1"
+    }
+  ],
+  "History": [
+    {
+      "Date": "2025-09-06T10:18:23.9936228Z",
+      "Success": true,
+      "OrderResults": [
+        {
+          "ExpireDate": "2025-12-05T09:20:06Z",
+          "Name": "main",
+          "Success": true,
+          "Thumbprint": "A7DDFBA99F7470C13780A6F352EB20FB26671059"
+        }
+      ]
+    }
+  ]
+}

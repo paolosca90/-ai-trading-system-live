@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/nginx/**)",
+      "Bash(\"C:/nginx/nginx.exe\" -t)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

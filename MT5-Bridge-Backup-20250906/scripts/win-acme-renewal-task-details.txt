@@ -1,0 +1,7 @@
+
+Folder: \
+HostName:      WIN-6GFP84O12PQ
+TaskName:      \win-acme renew (acme-v02.api.letsencrypt.org)
+Next Run Time: 9/7/2025 12:45:51 PM
+Status:        Ready
+Logon Mode:    Interactive/Background
