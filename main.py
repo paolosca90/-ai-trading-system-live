@@ -64,6 +64,27 @@ async def serve_test_page():
     """Serve the integration test page"""
     return FileResponse("test-integration.html")
 
+# Frontend HTML pages
+@app.get("/dashboard.html", response_class=HTMLResponse)
+async def serve_dashboard():
+    """Serve the dashboard page"""
+    return FileResponse("dashboard.html")
+
+@app.get("/signals.html", response_class=HTMLResponse)
+async def serve_signals():
+    """Serve the signals page"""
+    return FileResponse("signals.html")
+
+@app.get("/profile.html", response_class=HTMLResponse)
+async def serve_profile():
+    """Serve the profile page"""
+    return FileResponse("profile.html")
+
+@app.get("/mt5-integration.html", response_class=HTMLResponse)
+async def serve_mt5_integration():
+    """Serve the MT5 integration page"""
+    return FileResponse("mt5-integration.html")
+
 # API root endpoint
 @app.get("/api")
 def api_root():
