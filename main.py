@@ -766,6 +766,194 @@ def get_subscription_status(
         "last_payment": getattr(subscription, 'last_payment_date', None)
     }
 
+# ========== EA DOWNLOAD ENDPOINTS ==========
+
+@app.get("/download/ea")
+def download_expert_advisor(
+    current_user: User = Depends(get_current_active_user)
+):
+    """Download AI Cash-Revolution Expert Advisor for MT5"""
+    try:
+        ea_file_path = "AI_Cash_Revolution_EA.mq5"
+        
+        if not os.path.exists(ea_file_path):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Expert Advisor file not found"
+            )
+        
+        return FileResponse(
+            path=ea_file_path,
+            filename="AI_Cash_Revolution_EA.mq5",
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": "attachment; filename=AI_Cash_Revolution_EA.mq5"
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Errore durante il download: {str(e)}"
+        )
+
+@app.post("/mt5/heartbeat")
+def receive_ea_heartbeat(
+    heartbeat_data: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Receive heartbeat from EA with account stats"""
+    try:
+        # Log heartbeat for monitoring
+        account_number = heartbeat_data.get('account', 'unknown')
+        balance = heartbeat_data.get('balance', 0)
+        equity = heartbeat_data.get('equity', 0)
+        trades = heartbeat_data.get('trades', 0)
+        
+        print(f"EA Heartbeat - User: {current_user.username}, Account: {account_number}, Balance: {balance}, Trades: {trades}")
+        
+        return {
+            "status": "success",
+            "message": "Heartbeat ricevuto",
+            "server_time": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        print(f"Errore heartbeat EA: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Errore processing heartbeat"
+        }
+
+@app.get("/mt5/pending-orders")
+def get_pending_orders(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get pending orders for EA execution"""
+    try:
+        # Cerca segnali non ancora eseguiti per questo utente
+        pending_signals = db.query(Signal).filter(
+            Signal.user_id == current_user.id,
+            Signal.is_active == True,
+            Signal.outcome == "PENDING"
+        ).all()
+        
+        if not pending_signals:
+            return {
+                "status": "success",
+                "orders": [],
+                "message": "Nessun ordine pendente"
+            }
+        
+        # Converti in formato per EA
+        orders = []
+        for signal in pending_signals:
+            orders.append({
+                "order_id": str(signal.id),
+                "symbol": signal.asset,
+                "type": signal.signal_type,
+                "entry_price": signal.entry_price,
+                "stop_loss": signal.stop_loss,
+                "take_profit": signal.take_profit,
+                "volume": 0.1,  # TODO: Calcolare volume ottimale
+                "confidence": int(signal.reliability),
+                "explanation": signal.gemini_explanation,
+                "execute": True
+            })
+        
+        return {
+            "status": "success",
+            "orders": orders,
+            "count": len(orders)
+        }
+        
+    except Exception as e:
+        print(f"Errore pending orders: {str(e)}")
+        return {
+            "status": "error",
+            "orders": [],
+            "message": "Errore recupero ordini"
+        }
+
+@app.post("/mt5/order-execution")
+def confirm_order_execution(
+    execution_data: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Confirm order execution from EA"""
+    try:
+        order_id = execution_data.get('order_id')
+        executed = execution_data.get('executed', False)
+        
+        # Trova e aggiorna il segnale
+        signal = db.query(Signal).filter(Signal.id == order_id).first()
+        if signal:
+            signal.outcome = "WIN" if executed else "FAILED"
+            signal.is_active = False if executed else True
+            db.commit()
+            
+            print(f"Ordine {order_id} - Esecuzione: {executed}")
+        
+        return {
+            "status": "success",
+            "message": "Conferma ricevuta",
+            "order_id": order_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Errore conferma ordine: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Errore processing conferma"
+        }
+
+@app.post("/mt5/trade-confirmation")
+def receive_trade_confirmation(
+    trade_data: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Receive trade confirmation from EA"""
+    try:
+        # Crea record di esecuzione segnale
+        ticket = trade_data.get('ticket', 'unknown')
+        symbol = trade_data.get('symbol', 'unknown')
+        trade_type = trade_data.get('type', 0)
+        volume = trade_data.get('volume', 0)
+        price = trade_data.get('price', 0)
+        
+        # Crea SignalExecution record
+        execution = SignalExecution(
+            signal_id=None,  # TODO: Collegare al segnale originale
+            user_id=current_user.id,
+            execution_price=price,
+            quantity=volume,
+            execution_type="AUTO"
+        )
+        
+        db.add(execution)
+        db.commit()
+        
+        print(f"Trade confermato - User: {current_user.username}, Ticket: {ticket}, Symbol: {symbol}")
+        
+        return {
+            "status": "success",
+            "message": "Trade confirmation ricevuta",
+            "ticket": ticket
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Errore trade confirmation: {str(e)}")
+        return {
+            "status": "error",
+            "message": "Errore processing trade confirmation"
+        }
+
 # ========== ADMIN ENDPOINTS ==========
 
 @app.post("/admin/generate-signals")

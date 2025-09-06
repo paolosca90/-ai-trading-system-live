@@ -60,14 +60,14 @@
         <div class="setup-steps">
             <h3 class="steps-title">Quick Setup Guide</h3>
             <div class="steps-list">
-                <div class="step-item completed">
+                <div class="step-item" id="downloadStep">
                     <div class="step-number">1</div>
                     <div class="step-content">
                         <div class="step-title">Download EA</div>
                         <div class="step-description">Download our Expert Advisor for MT5</div>
                     </div>
                     <div class="step-action">
-                        <button class="step-btn completed">✓ Downloaded</button>
+                        <button class="step-btn" onclick="downloadEA()">📥 Download EA</button>
                     </div>
                 </div>
                 
@@ -463,12 +463,58 @@
             }, 1500);
         }
         
-        function downloadEA() {
-            // Simulate file download
-            showSuccessMessage('EA download started! Check your downloads folder.');
+        async function downloadEA() {
+            const btn = event.target;
+            const originalHTML = btn.innerHTML;
             
-            // In real implementation, would trigger actual file download
-            console.log('Downloading EA file...');
+            try {
+                // Show loading state
+                btn.innerHTML = '⏳ Downloading...';
+                btn.disabled = true;
+                
+                // Get JWT token
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    throw new Error('Please login first');
+                }
+                
+                // Download EA file
+                const response = await fetch('/download/ea', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/octet-stream'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Download failed');
+                }
+                
+                // Create download
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'AI_Cash_Revolution_EA.mq5';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // Mark as completed
+                btn.innerHTML = '✅ Downloaded';
+                btn.className = 'step-btn completed';
+                document.getElementById('downloadStep').classList.add('completed');
+                
+                showSuccessMessage('✅ Expert Advisor scaricato! Installalo in MT5 seguendo la guida.');
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+                showErrorMessage('❌ Errore download: ' + error.message);
+            }
         }
         
         function showInstallGuide() {
