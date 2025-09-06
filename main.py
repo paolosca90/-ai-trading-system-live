@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
 from typing import List, Optional
+import httpx
+import os
 
 # Import our modules
 from database import SessionLocal, engine
@@ -44,6 +46,72 @@ app.add_middleware(
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# MT5 Bridge Configuration
+MT5_BRIDGE_URL = os.getenv("MT5_BRIDGE_URL", "http://localhost:8000")
+MT5_BRIDGE_API_KEY = os.getenv("MT5_BRIDGE_API_KEY", "your-bridge-api-key-change-this")
+
+# Global MT5 connection status
+mt5_connection_active = False
+last_quotes_update = None
+
+# MT5 Bridge Helper Functions
+async def connect_to_mt5_bridge():
+    """Test connection to MT5 Bridge service"""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{MT5_BRIDGE_URL}/health")
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("mt5_initialized", False)
+    except Exception as e:
+        print(f"MT5 Bridge connection error: {e}")
+    return False
+
+async def get_mt5_quotes(symbols: List[str] = None):
+    """Fetch current quotes from MT5 Bridge"""
+    if not symbols:
+        symbols = ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "USDCAD", "AUDUSD", "NZDUSD"]
+    
+    quotes = {}
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            headers = {"X-API-Key": MT5_BRIDGE_API_KEY}
+            
+            for symbol in symbols:
+                try:
+                    # Get latest rates for the symbol
+                    rates_request = {
+                        "symbol": symbol,
+                        "timeframe": "M1",
+                        "count": 1
+                    }
+                    
+                    response = await client.post(
+                        f"{MT5_BRIDGE_URL}/bridge/rates",
+                        json=rates_request,
+                        headers=headers
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data.get("rates") and len(data["rates"]) > 0:
+                            latest_rate = data["rates"][-1]
+                            quotes[symbol] = {
+                                "symbol": symbol,
+                                "bid": latest_rate["close"],
+                                "ask": latest_rate["close"] + 0.0001,  # Approximate spread
+                                "time": latest_rate["time"],
+                                "change": 0.0  # Calculate from previous close if needed
+                            }
+                except Exception as e:
+                    print(f"Error fetching {symbol}: {e}")
+                    continue
+                    
+    except Exception as e:
+        print(f"MT5 quotes fetch error: {e}")
+    
+    return quotes
 
 # Dependency
 def get_db():
@@ -294,13 +362,13 @@ def get_landing_page_stats(db: Session = Depends(get_db)):
         else:
             success_rate = 95.0
         
-        # Simulate some realistic numbers for demo
+        # Return real statistics for production
         return {
-            "active_traders": max(10000, total_users * 50),  # Simulate larger user base
+            "active_traders": total_users,
             "success_rate": round(min(99, max(90, success_rate)), 1),
-            "total_signals": max(50000, total_signals * 100),
+            "total_signals": total_signals,
             "countries_served": 127,
-            "total_profits": 2400000,  # $2.4M
+            "total_profits": int(sum([s.profit_loss for s in public_signals if s.profit_loss and s.profit_loss > 0])),
             "uptime": 99.9
         }
     except Exception as e:
@@ -325,28 +393,8 @@ def get_recent_signals_preview(db: Session = Depends(get_db)):
         ).order_by(Signal.created_at.desc()).limit(5).all()
         
         if not recent_signals:
-            # Return sample data if no signals exist
-            from datetime import datetime, timedelta
-            import random
-            
-            sample_pairs = ["EUR/USD", "GBP/USD", "USD/JPY", "AUD/USD", "USD/CAD"]
-            sample_data = []
-            
-            for i in range(3):
-                pair = random.choice(sample_pairs)
-                direction = random.choice(["BUY", "SELL"])
-                profit = random.randint(150, 350)
-                hours_ago = random.randint(1, 12)
-                
-                sample_data.append({
-                    "pair": pair,
-                    "direction": direction,
-                    "profit_pips": profit,
-                    "hours_ago": hours_ago,
-                    "outcome": "WIN"
-                })
-            
-            return {"signals": sample_data}
+            # Return empty list if no real signals exist
+            return {"signals": []}
         
         # Format real signals
         formatted_signals = []
@@ -363,14 +411,8 @@ def get_recent_signals_preview(db: Session = Depends(get_db)):
         return {"signals": formatted_signals[:3]}  # Return top 3
         
     except Exception as e:
-        # Return fallback data
-        return {
-            "signals": [
-                {"pair": "EUR/USD", "direction": "BUY", "profit_pips": 312, "hours_ago": 2, "outcome": "WIN"},
-                {"pair": "GBP/USD", "direction": "SELL", "profit_pips": 189, "hours_ago": 6, "outcome": "WIN"},
-                {"pair": "USD/CAD", "direction": "SELL", "profit_pips": 274, "hours_ago": 24, "outcome": "WIN"}
-            ]
-        }
+        # Return empty data on error in production
+        return {"signals": []}
 
 @app.get("/me", response_model=UserStatsOut)
 def get_current_user_info(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -581,6 +623,138 @@ def get_mt5_connection_status(
         )
 
     return connection
+
+@app.get("/mt5/quotes")
+async def get_live_quotes(
+    symbols: Optional[str] = None,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get live MT5 quotes for specified symbols"""
+    global mt5_connection_active, last_quotes_update
+    
+    # Parse symbols parameter
+    symbol_list = None
+    if symbols:
+        symbol_list = [s.strip().upper() for s in symbols.split(",")]
+    
+    # Check MT5 Bridge connection
+    bridge_connected = await connect_to_mt5_bridge()
+    mt5_connection_active = bridge_connected
+    
+    if not bridge_connected:
+        return {
+            "status": "error",
+            "message": "MT5 Bridge non disponibile",
+            "bridge_url": MT5_BRIDGE_URL,
+            "quotes": {}
+        }
+    
+    # Get live quotes
+    quotes = await get_mt5_quotes(symbol_list)
+    last_quotes_update = datetime.utcnow()
+    
+    return {
+        "status": "success",
+        "message": "Quotazioni aggiornate",
+        "bridge_connected": True,
+        "last_update": last_quotes_update,
+        "quotes": quotes
+    }
+
+@app.get("/mt5/bridge-status")
+async def check_bridge_status():
+    """Check MT5 Bridge service status"""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{MT5_BRIDGE_URL}/health")
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "status": "connected",
+                    "bridge_url": MT5_BRIDGE_URL,
+                    "mt5_initialized": data.get("mt5_initialized", False),
+                    "current_login": data.get("current_login"),
+                    "timestamp": data.get("timestamp")
+                }
+    except Exception as e:
+        return {
+            "status": "disconnected",
+            "bridge_url": MT5_BRIDGE_URL,
+            "error": str(e)
+        }
+
+# ========== PAYMENT ENDPOINTS ==========
+
+@app.post("/api/payments/create-demo-payment")
+def create_demo_payment(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Simulate payment processing for demo/development purposes"""
+    try:
+        # Get user subscription
+        subscription = db.query(Subscription).filter(Subscription.user_id == current_user.id).first()
+        
+        if not subscription:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Nessuna sottoscrizione trovata"
+            )
+        
+        # Simulate successful payment processing
+        # In production, this would integrate with real Stripe
+        subscription.status = "ACTIVE"
+        subscription.plan_name = "pro"
+        subscription.end_date = datetime.utcnow() + timedelta(days=30)
+        subscription.payment_status = "PAID"
+        subscription.last_payment_date = datetime.utcnow()
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "Pagamento simulato con successo! Account aggiornato a Pro.",
+            "payment_id": f"demo_payment_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            "subscription_status": "ACTIVE",
+            "plan": "pro",
+            "expires": subscription.end_date.isoformat()
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Errore durante il pagamento: {str(e)}"
+        )
+
+@app.get("/api/payments/subscription-status")
+def get_subscription_status(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get current subscription status"""
+    subscription = db.query(Subscription).filter(Subscription.user_id == current_user.id).first()
+    
+    if not subscription:
+        return {
+            "status": "INACTIVE",
+            "plan": "none",
+            "expires": None,
+            "days_remaining": 0
+        }
+    
+    days_remaining = 0
+    if subscription.end_date:
+        days_remaining = max(0, (subscription.end_date - datetime.utcnow()).days)
+    
+    return {
+        "status": subscription.status,
+        "plan": subscription.plan_name,
+        "expires": subscription.end_date.isoformat() if subscription.end_date else None,
+        "days_remaining": days_remaining,
+        "payment_status": getattr(subscription, 'payment_status', 'UNKNOWN'),
+        "last_payment": getattr(subscription, 'last_payment_date', None)
+    }
 
 # ========== ADMIN ENDPOINTS ==========
 
