@@ -127,6 +127,16 @@ async def serve_landing_page():
     """Serve the AI Cash-Revolution landing page"""
     return FileResponse("index.html")
 
+@app.get("/login.html", response_class=HTMLResponse)
+async def serve_login_page():
+    """Serve the login page"""
+    return FileResponse("login.html")
+
+@app.get("/register.html", response_class=HTMLResponse)
+async def serve_register_page():
+    """Serve the registration page"""
+    return FileResponse("register.html")
+
 @app.get("/test-integration.html", response_class=HTMLResponse)
 async def serve_test_page():
     """Serve the integration test page"""
