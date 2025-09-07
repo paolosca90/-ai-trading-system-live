@@ -477,11 +477,27 @@ def debug_signals(db: Session = Depends(get_db)):
 @app.get("/api/ml/signals")
 def get_ml_signals(db: Session = Depends(get_db)):
     """Get signals with reliability >= 70% for machine learning training"""
-    ml_signals = db.query(Signal).filter(
-        Signal.is_public == True,
-        Signal.use_for_ml == True,
-        Signal.reliability >= 70.0
-    ).order_by(Signal.created_at.desc()).limit(50).all()
+    try:
+        # Try to use use_for_ml field if it exists, otherwise fall back to reliability
+        if hasattr(Signal, 'use_for_ml'):
+            ml_signals = db.query(Signal).filter(
+                Signal.is_public == True,
+                Signal.use_for_ml == True,
+                Signal.reliability >= 70.0
+            ).order_by(Signal.created_at.desc()).limit(50).all()
+        else:
+            # Fallback if use_for_ml field doesn't exist yet
+            ml_signals = db.query(Signal).filter(
+                Signal.is_public == True,
+                Signal.reliability >= 70.0
+            ).order_by(Signal.created_at.desc()).limit(50).all()
+    except Exception as e:
+        print(f"Error querying ML signals: {e}")
+        # Fallback query
+        ml_signals = db.query(Signal).filter(
+            Signal.is_public == True,
+            Signal.reliability >= 70.0
+        ).order_by(Signal.created_at.desc()).limit(50).all()
     
     ml_data = []
     for signal in ml_signals:
@@ -1087,37 +1103,8 @@ async def generate_quick_signals(db: Session) -> List[Dict]:
             
     except Exception as e:
         print(f"Error generating signals: {e}")
-        # Fallback demo signals if MT5 fails
-        demo_signals = [
-            {
-                "symbol": "EURUSD",
-                "signal_type": "BUY",
-                "entry_price": 1.1750,
-                "stop_loss": 1.1720,
-                "take_profit": 1.1800,
-                "confidence": 78.5,
-                "explanation": "Demo signal: Bullish momentum detected with strong support levels."
-            },
-            {
-                "symbol": "GBPUSD", 
-                "signal_type": "SELL",
-                "entry_price": 1.3500,
-                "stop_loss": 1.3530,
-                "take_profit": 1.3450,
-                "confidence": 72.3,
-                "explanation": "Demo signal: Bearish trend continuation expected."
-            },
-            {
-                "symbol": "USDJPY",
-                "signal_type": "BUY", 
-                "entry_price": 147.50,
-                "stop_loss": 147.20,
-                "take_profit": 148.00,
-                "confidence": 85.2,
-                "explanation": "Demo signal: Strong upward momentum with favorable risk/reward."
-            }
-        ]
-        signals = demo_signals[:3]
+        # NO FALLBACK DATA - Only real MT5 data or nothing
+        signals = []
     
     return signals
 
@@ -1146,22 +1133,27 @@ async def auto_generate_signals(db: Session = Depends(get_db)):
             signals_created = 0
             for signal_data in signals:
                 try:
-                    new_signal = Signal(
-                        user_id=None,  # Public signals
-                        asset=signal_data["symbol"],
-                        signal_type=signal_data["signal_type"],
-                        entry_price=signal_data["entry_price"],
-                        stop_loss=signal_data["stop_loss"],
-                        take_profit=signal_data["take_profit"],
-                        reliability=signal_data["confidence"],
-                        is_public=True,
-                        current_price=signal_data["entry_price"],
-                        gemini_explanation=signal_data["explanation"],
-                        expires_at=datetime.utcnow() + timedelta(hours=4),
-                        is_active=True,
-                        outcome="PENDING",
-                        use_for_ml=(signal_data["confidence"] >= 70.0)  # ML flag for high confidence signals
-                    )
+                    signal_kwargs = {
+                        "user_id": None,  # Public signals
+                        "asset": signal_data["symbol"],
+                        "signal_type": signal_data["signal_type"],
+                        "entry_price": signal_data["entry_price"],
+                        "stop_loss": signal_data["stop_loss"],
+                        "take_profit": signal_data["take_profit"],
+                        "reliability": signal_data["confidence"],
+                        "is_public": True,
+                        "current_price": signal_data["entry_price"],
+                        "gemini_explanation": signal_data["explanation"],
+                        "expires_at": datetime.utcnow() + timedelta(hours=4),
+                        "is_active": True,
+                        "outcome": "PENDING"
+                    }
+                    
+                    # Only add use_for_ml if the field exists in the model
+                    if hasattr(Signal, 'use_for_ml'):
+                        signal_kwargs["use_for_ml"] = (signal_data["confidence"] >= 70.0)
+                    
+                    new_signal = Signal(**signal_kwargs)
                     
                     db.add(new_signal)
                     signals_created += 1
