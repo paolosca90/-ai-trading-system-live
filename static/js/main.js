@@ -91,12 +91,20 @@ function initAuthSystem() {
     if (authDropdownBtn && authDropdownMenu) {
         authDropdownBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            const authDropdown = authDropdownBtn.closest('.auth-dropdown');
             authDropdownMenu.classList.toggle('show');
+            if (authDropdown) {
+                authDropdown.classList.toggle('show');
+            }
         });
         
         // Close dropdown when clicking outside
         document.addEventListener('click', () => {
+            const authDropdown = authDropdownBtn.closest('.auth-dropdown');
             authDropdownMenu.classList.remove('show');
+            if (authDropdown) {
+                authDropdown.classList.remove('show');
+            }
         });
         
         // Handle auth option clicks
@@ -109,7 +117,11 @@ function initAuthSystem() {
                 } else if (action === 'register') {
                     showAuthModal('register');
                 }
+                const authDropdown = authDropdownBtn.closest('.auth-dropdown');
                 authDropdownMenu.classList.remove('show');
+                if (authDropdown) {
+                    authDropdown.classList.remove('show');
+                }
             }
         });
     }
@@ -614,7 +626,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('Form submission error:', error);
-            showErrorMessage();
+            showErrorMessage('Errore durante la registrazione. Riprova.');
         } finally {
             // Reset button state
             submitButton.classList.remove('loading');
@@ -647,7 +659,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addSuccessMessageStyles();
     }
     
-    function showErrorMessage() {
+    function showErrorMessage(customMessage) {
         const message = document.createElement('div');
         message.className = 'error-message';
         message.innerHTML = `
@@ -655,7 +667,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="message-icon">⚠</div>
                 <div class="message-text">
                     <h3>Registration Failed</h3>
-                    <p>Please try again or contact support if the problem persists.</p>
+                    <p>${customMessage || 'Please try again or contact support if the problem persists.'}</p>
                 </div>
             </div>
         `;
@@ -1057,6 +1069,42 @@ document.addEventListener('DOMContentLoaded', function() {
     
     monitorPerformance();
     
+    // Load live statistics from backend
+    async function loadLiveStatistics() {
+        try {
+            const response = await fetch(CONFIG.API_BASE_URL + '/signals/top', {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const signals = await response.json();
+                if (signals && signals.length > 0) {
+                    // Calculate average reliability
+                    const avgReliability = signals.reduce((sum, signal) => sum + signal.reliability, 0) / signals.length;
+                    
+                    // Update the accuracy stat
+                    const accuracyStat = document.querySelector('[data-target="95"]');
+                    if (accuracyStat) {
+                        accuracyStat.setAttribute('data-target', Math.round(avgReliability).toString());
+                        accuracyStat.textContent = Math.round(avgReliability).toString();
+                    }
+                    
+                    console.log('Live stats loaded successfully:', {
+                        totalSignals: signals.length,
+                        avgReliability: Math.round(avgReliability)
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn('Could not load live stats, using static data:', error);
+        }
+    }
+
+    // Load live statistics when page loads
+    loadLiveStatistics();
+    
     // ===== Initialize all features =====
     console.log('AI Cash-Revolution landing page initialized');
 });
@@ -1261,40 +1309,4 @@ window.AILandingPage = {
             });
         }
     }
-    
-    // Load live statistics from backend
-    async function loadLiveStatistics() {
-        try {
-            const response = await fetch(CONFIG.API_BASE_URL + '/signals/top', {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-            
-            if (response.ok) {
-                const signals = await response.json();
-                if (signals && signals.length > 0) {
-                    // Calculate average reliability
-                    const avgReliability = signals.reduce((sum, signal) => sum + signal.reliability, 0) / signals.length;
-                    
-                    // Update the accuracy stat
-                    const accuracyStat = document.querySelector('[data-target="95"]');
-                    if (accuracyStat) {
-                        accuracyStat.setAttribute('data-target', Math.round(avgReliability).toString());
-                        accuracyStat.textContent = Math.round(avgReliability).toString();
-                    }
-                    
-                    console.log('Live stats loaded successfully:', {
-                        totalSignals: signals.length,
-                        avgReliability: Math.round(avgReliability)
-                    });
-                }
-            }
-        } catch (error) {
-            console.warn('Could not load live stats, using static data:', error);
-        }
-    }
-    
-    // Load live statistics when page loads
-    loadLiveStatistics();
 };
