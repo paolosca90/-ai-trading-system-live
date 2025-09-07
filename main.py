@@ -439,41 +439,18 @@ def get_current_user_info(current_user: User = Depends(get_current_active_user),
 
 @app.get("/signals/top", response_model=TopSignalsResponse)
 def get_top_signals(db: Session = Depends(get_db)):
-    """Get top public signals with highest reliability"""
+    """Get top 3 public signals with highest reliability"""
     top_signals = db.query(Signal).filter(
         Signal.is_public == True,
-        Signal.reliability >= 60.0  # Lower threshold to show more signals
-    ).order_by(Signal.reliability.desc()).limit(5).all()  # Show up to 5 signals
+        Signal.is_active == True,
+        Signal.reliability >= 70.0
+    ).order_by(Signal.reliability.desc()).limit(3).all()
 
     return TopSignalsResponse(
         signals=top_signals,
         count=len(top_signals),
         generated_at=datetime.utcnow()
     )
-
-@app.get("/debug/signals")
-def debug_signals(db: Session = Depends(get_db)):
-    """Debug endpoint to see all signals in database"""
-    all_signals = db.query(Signal).order_by(Signal.created_at.desc()).limit(10).all()
-    
-    signals_data = []
-    for signal in all_signals:
-        signals_data.append({
-            "id": signal.id,
-            "asset": signal.asset,
-            "signal_type": signal.signal_type,
-            "reliability": signal.reliability,
-            "is_public": signal.is_public,
-            "is_active": signal.is_active,
-            "created_at": signal.created_at.isoformat() if signal.created_at else None,
-            "outcome": signal.outcome
-        })
-    
-    return {
-        "total_signals": len(all_signals),
-        "signals": signals_data,
-        "timestamp": datetime.utcnow().isoformat()
-    }
 
 @app.get("/signals", response_model=List[SignalOut])
 def get_user_signals(
