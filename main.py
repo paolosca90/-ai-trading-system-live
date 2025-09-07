@@ -25,8 +25,8 @@ from jwt_auth import (
 )
 # IMPORT AGGIUNTO PER EMAIL
 from email_utils import send_registration_email
-# IMPORT PER SIGNAL GENERATION
-from signal_engine import get_signal_engine
+# SIGNAL ENGINE NON DISPONIBILE SU RAILWAY (solo su VPS Windows)
+# from signal_engine import get_signal_engine
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -949,211 +949,32 @@ def receive_trade_confirmation(
 
 # ========== ADMIN ENDPOINTS ==========
 
-@app.post("/admin/generate-signals")
-def generate_signals_manually(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
-):
-    """Generate signals manually (admin only)"""
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
+# SIGNAL GENERATION ENDPOINTS COMMENTATI - DISPONIBILI SOLO SU VPS
+# @app.post("/admin/generate-signals")
+# def generate_signals_manually(
+#     current_user: User = Depends(get_current_active_user),
+#     db: Session = Depends(get_db)
+# ):
+#     """Generate signals manually (admin only) - DISPONIBILE SOLO SU VPS"""
+#     return {"error": "Signal generation available only on VPS"}  
 
-    try:
-        engine = get_signal_engine()
-        generated_count = 0
-        
-        # Generate signals for top priority symbols (major pairs + metals + indices)
-        priority_symbols = [
-            "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
-            "XAUUSD", "XAGUSD", "SP500", "US30", "NAS100"
-        ]
-        
-        for symbol in priority_symbols:
-            try:
-                signal_data = engine.generate_signal(symbol, db)
-                if signal_data and signal_data.get('reliability', 0) >= 70:
-                    # Create signal in database
-                    new_signal = Signal(
-                        asset=signal_data['asset'],
-                        signal_type=signal_data['signal_type'].value,
-                        entry_price=signal_data['entry_price'],
-                        current_price=signal_data['current_price'],
-                        stop_loss=signal_data.get('stop_loss'),
-                        take_profit=signal_data.get('take_profit'),
-                        reliability=signal_data['reliability'],
-                        is_active=True,
-                        is_public=True,
-                        outcome="PENDING",
-                        gemini_explanation=signal_data.get('gemini_explanation'),
-                        expires_at=signal_data.get('expires_at')
-                    )
-                    
-                    db.add(new_signal)
-                    generated_count += 1
-                    
-            except Exception as e:
-                print(f"Error generating signal for {symbol}: {e}")
-                continue
-        
-        # Commit all signals
-        db.commit()
-        
-        return {
-            "message": f"Generated {generated_count} signals successfully",
-            "status": "completed",
-            "generated_count": generated_count
-        }
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Signal generation failed: {str(e)}"
-        )
+# TUTTI GLI ENDPOINT DI GENERAZIONE SEGNALI COMMENTATI - DISPONIBILI SOLO SU VPS
+# (Railway serve solo interfaccia web e si connette alla VPS per i dati)
 
-@app.post("/generate-signals-auto")
-def generate_signals_automatically(
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
-):
-    """Auto-generate signals (background task for scheduled generation)"""
-    try:
-        # Deactivate old signals first (older than 8 hours)
-        old_signals = db.query(Signal).filter(
-            Signal.is_active == True,
-            Signal.created_at < datetime.utcnow() - timedelta(hours=8)
-        ).all()
-        
-        for signal in old_signals:
-            signal.is_active = False
-            if signal.outcome == "PENDING":
-                signal.outcome = "EXPIRED"
-        
-        engine = get_signal_engine()
-        generated_count = 0
-        
-        # Generate new signals for all supported symbols
-        for symbol in engine.supported_symbols:
-            try:
-                signal_data = engine.generate_signal(symbol, db)
-                if signal_data and signal_data.get('reliability', 0) >= 70:
-                    # Check if we already have an active signal for this asset
-                    existing = db.query(Signal).filter(
-                        Signal.asset == signal_data['asset'],
-                        Signal.is_active == True,
-                        Signal.created_at > datetime.utcnow() - timedelta(hours=2)
-                    ).first()
-                    
-                    if not existing:
-                        new_signal = Signal(
-                            asset=signal_data['asset'],
-                            signal_type=signal_data['signal_type'].value,
-                            entry_price=signal_data['entry_price'],
-                            current_price=signal_data['current_price'],
-                            stop_loss=signal_data.get('stop_loss'),
-                            take_profit=signal_data.get('take_profit'),
-                            reliability=signal_data['reliability'],
-                            is_active=True,
-                            is_public=True,
-                            outcome="PENDING",
-                            gemini_explanation=signal_data.get('gemini_explanation'),
-                            expires_at=signal_data.get('expires_at')
-                        )
-                        
-                        db.add(new_signal)
-                        generated_count += 1
-                        
-            except Exception as e:
-                print(f"Error generating signal for {symbol}: {e}")
-                continue
-        
-        db.commit()
-        return {
-            "message": f"Auto-generated {generated_count} signals",
-            "generated_count": generated_count
-        }
-        
-    except Exception as e:
-        db.rollback()
-        return {"error": f"Auto-generation failed: {str(e)}"}
-
-@app.get("/api/generate-signals-if-needed")
-def generate_signals_if_needed(db: Session = Depends(get_db)):
-    """Generate signals if there are less than 3 active signals"""
-    try:
-        # Check how many active signals we have
-        active_signals_count = db.query(Signal).filter(
-            Signal.is_active == True,
-            Signal.is_public == True,
-            Signal.reliability >= 70
-        ).count()
-        
-        if active_signals_count < 3:
-            # Generate signals automatically
-            engine = get_signal_engine()
-            generated_count = 0
-            
-            priority_symbols = [
-                "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "XAUUSD", "XAGUSD", 
-                "SP500", "US30", "NAS100", "EURGBP", "EURJPY", "GBPJPY"
-            ]
-            
-            for symbol in priority_symbols:
-                if active_signals_count + generated_count >= 6:  # Max 6 signals
-                    break
-                    
-                try:
-                    # Check if we already have a signal for this asset
-                    existing = db.query(Signal).filter(
-                        Signal.asset == symbol,
-                        Signal.is_active == True
-                    ).first()
-                    
-                    if not existing:
-                        signal_data = engine.generate_signal(symbol, db)
-                        if signal_data and signal_data.get('reliability', 0) >= 70:
-                            new_signal = Signal(
-                                asset=signal_data['asset'],
-                                signal_type=signal_data['signal_type'].value,
-                                entry_price=signal_data['entry_price'],
-                                current_price=signal_data['current_price'],
-                                stop_loss=signal_data.get('stop_loss'),
-                                take_profit=signal_data.get('take_profit'),
-                                reliability=signal_data['reliability'],
-                                is_active=True,
-                                is_public=True,
-                                outcome="PENDING",
-                                gemini_explanation=signal_data.get('gemini_explanation'),
-                                expires_at=signal_data.get('expires_at')
-                            )
-                            
-                            db.add(new_signal)
-                            generated_count += 1
-                            
-                except Exception as e:
-                    print(f"Error generating signal for {symbol}: {e}")
-                    continue
-            
-            db.commit()
-            
-            return {
-                "message": f"Generated {generated_count} new signals",
-                "generated": generated_count,
-                "total_active": active_signals_count + generated_count
-            }
-        
-        return {
-            "message": "Sufficient signals available",
-            "generated": 0,
-            "total_active": active_signals_count
-        }
-        
-    except Exception as e:
-        db.rollback()
-        return {"error": f"Signal generation failed: {str(e)}"}
+@app.get("/api/generate-signals-if-needed")  
+def generate_signals_if_needed_info(db: Session = Depends(get_db)):
+    """Info sui segnali - generazione disponibile solo su VPS"""
+    active_count = db.query(Signal).filter(
+        Signal.is_active == True,
+        Signal.is_public == True
+    ).count()
+    
+    return {
+        "message": "Signal generation available on VPS only",
+        "generated": 0,
+        "total_active": active_count,
+        "info": "Railway serves web interface - signals generated on VPS"
+    }
 
 if __name__ == "__main__":
     import uvicorn

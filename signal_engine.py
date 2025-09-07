@@ -1,12 +1,10 @@
 import os
-import MetaTrader5 as mt5
 import pandas as pd
 import numpy as np
-import talib
+import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 import logging
-import google.generativeai as genai
 from sqlalchemy.orm import Session
 from schemas import SignalTypeEnum
 
@@ -14,13 +12,25 @@ from schemas import SignalTypeEnum
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configure Gemini AI
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
-else:
+# Try to import optional dependencies
+try:
+    import google.generativeai as genai
+    GEMINI_AVAILABLE = True
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if GEMINI_API_KEY:
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-pro')
+    else:
+        model = None
+except ImportError:
+    GEMINI_AVAILABLE = False
     model = None
+
+try:
+    import talib
+    TALIB_AVAILABLE = True
+except ImportError:
+    TALIB_AVAILABLE = False
 
 class ProfessionalSignalEngine:
     """
@@ -35,91 +45,118 @@ class ProfessionalSignalEngine:
     """
 
     def __init__(self):
-        self.mt5_initialized = False
+        self.mt5_bridge_url = os.getenv("MT5_BRIDGE_URL", "http://ai.cash-revolution.com:8000")
+        self.bridge_connected = False
 
-        # Asset supportati dal sistema - FOREX MAJOR + MINOR + METALS + INDICES
-        self.supported_symbols = [
-            # FOREX MAJOR PAIRS
-            "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD",
+        # Asset supportati con varianti per diversi broker
+        self.symbol_variants = {
+            # FOREX MAJOR PAIRS - varianti comuni broker
+            "EURUSD": ["EURUSD", "EURUSDm", "EURUSD.", "EURUSD.raw", "EURUSD#"],
+            "GBPUSD": ["GBPUSD", "GBPUSDm", "GBPUSD.", "GBPUSD.raw", "GBPUSD#"],
+            "USDJPY": ["USDJPY", "USDJPYm", "USDJPY.", "USDJPY.raw", "USDJPY#"],
+            "USDCHF": ["USDCHF", "USDCHFm", "USDCHF.", "USDCHF.raw", "USDCHF#"],
+            "AUDUSD": ["AUDUSD", "AUDUSDm", "AUDUSD.", "AUDUSD.raw", "AUDUSD#"],
+            "USDCAD": ["USDCAD", "USDCADm", "USDCAD.", "USDCAD.raw", "USDCAD#"],
+            "NZDUSD": ["NZDUSD", "NZDUSDm", "NZDUSD.", "NZDUSD.raw", "NZDUSD#"],
             
-            # FOREX MINOR PAIRS (CROSSES)  
-            "EURGBP", "EURJPY", "EURCHF", "EURAUD", "EURCAD", "EURNZD",
-            "GBPJPY", "GBPCHF", "GBPAUD", "GBPCAD", "GBPNZD",
-            "AUDJPY", "AUDCHF", "AUDCAD", "AUDNZD",
-            "CADJPY", "CADCHF", "NZDJPY", "NZDCHF", "NZDCAD",
-            "CHFJPY",
+            # FOREX MINOR PAIRS 
+            "EURGBP": ["EURGBP", "EURGBPm", "EURGBP.", "EURGBP.raw", "EURGBP#"],
+            "EURJPY": ["EURJPY", "EURJPYm", "EURJPY.", "EURJPY.raw", "EURJPY#"],
+            "EURCHF": ["EURCHF", "EURCHFm", "EURCHF.", "EURCHF.raw", "EURCHF#"],
+            "EURAUD": ["EURAUD", "EURAUDm", "EURAUD.", "EURAUD.raw", "EURAUD#"],
+            "GBPJPY": ["GBPJPY", "GBPJPYm", "GBPJPY.", "GBPJPY.raw", "GBPJPY#"],
+            "GBPCHF": ["GBPCHF", "GBPCHFm", "GBPCHF.", "GBPCHF.raw", "GBPCHF#"],
+            "AUDCAD": ["AUDCAD", "AUDCADm", "AUDCAD.", "AUDCAD.raw", "AUDCAD#"],
+            "AUDJPY": ["AUDJPY", "AUDJPYm", "AUDJPY.", "AUDJPY.raw", "AUDJPY#"],
+            "CADJPY": ["CADJPY", "CADJPYm", "CADJPY.", "CADJPY.raw", "CADJPY#"],
+            "CHFJPY": ["CHFJPY", "CHFJPYm", "CHFJPY.", "CHFJPY.raw", "CHFJPY#"],
             
-            # METALS
-            "XAUUSD", "XAGUSD", "XAUEUR", "XAUAUD", "XAUCAD", "XAUGBP",
+            # METALS - varianti comuni
+            "XAUUSD": ["XAUUSD", "XAUUSDm", "XAUUSD.", "GOLD", "GOLDm", "GOLD.", "Au"],
+            "XAGUSD": ["XAGUSD", "XAGUSDm", "XAGUSD.", "SILVER", "SILVERm", "SILVER.", "Ag"],
             
-            # INDICES
-            "SP500", "US500", "NASDAQ", "NAS100", "US30", "DJ30", "DAX30", "UK100", "FRA40", "ESP35", "ITA40",
-            "AUS200", "JPN225", "HK50", "CHINA50",
-            
-            # CRYPTO (if available)
-            "BTCUSD", "ETHUSD", "LTCUSD", "XRPUSD", "ADAUSD"
-        ]
+            # INDICES - varianti broker diversi
+            "US500": ["US500", "US500m", "US500.", "SPX500", "SP500", "S&P500"],
+            "US30": ["US30", "US30m", "US30.", "DJI30", "DJ30", "DJIA", "YM"],
+            "NAS100": ["NAS100", "NAS100m", "NAS100.", "NASDAQ", "NDX", "NQ"],
+            "GER30": ["GER30", "GER30m", "GER30.", "DAX30", "DAX", "DE30"],
+            "UK100": ["UK100", "UK100m", "UK100.", "FTSE", "UKX"],
+            "JPN225": ["JPN225", "JPN225m", "JPN225.", "NIKKEI", "N225", "NI225"],
+        }
+        
+        # Lista completa simboli base
+        self.supported_symbols = list(self.symbol_variants.keys())
 
         # Timeframes per analisi multi-frame
         self.timeframes = {
-            'M1': mt5.TIMEFRAME_M1,
-            'M5': mt5.TIMEFRAME_M5,
-            'M15': mt5.TIMEFRAME_M15,
-            'M30': mt5.TIMEFRAME_M30,
-            'H1': mt5.TIMEFRAME_H1,
-            'H4': mt5.TIMEFRAME_H4,
-            'D1': mt5.TIMEFRAME_D1
+            'M1': 1,
+            'M5': 5,
+            'M15': 15,
+            'M30': 30,
+            'H1': 60,
+            'H4': 240,
+            'D1': 1440
         }
 
-    def initialize_mt5(self) -> bool:
-        """Inizializza connessione a MetaTrader 5"""
+    def check_mt5_bridge(self) -> bool:
+        """Controlla connessione al MT5 Bridge sulla VPS"""
         try:
-            if not mt5.initialize():
-                logger.error("Impossibile inizializzare MT5")
+            response = requests.get(
+                f"{self.mt5_bridge_url}/api/mt5/quotes",
+                params={"symbols": "EURUSD"},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.bridge_connected = data.get("bridge_connected", False)
+                logger.info(f"MT5 Bridge {'connesso' if self.bridge_connected else 'disconnesso'}")
+                return self.bridge_connected
+            else:
+                logger.error(f"MT5 Bridge non raggiungibile: HTTP {response.status_code}")
                 return False
 
-            self.mt5_initialized = True
-            logger.info("MT5 inizializzato con successo")
-            return True
-
         except Exception as e:
-            logger.error(f"Errore inizializzazione MT5: {e}")
+            logger.error(f"Errore connessione MT5 Bridge: {e}")
             return False
 
     def get_market_data(self, symbol: str, timeframe: str = 'H1', count: int = 500) -> Optional[pd.DataFrame]:
         """
         Estrae dati di mercato reali da MT5
-        - symbol: coppia/asset da analizzare (es. EURUSD)
-        - timeframe: timeframe dati (M1, M5, H1, H4, D1)  
-        - count: numero di candele da scaricare
+        Prova tutte le varianti del simbolo per diversi broker
         """
         if not self.mt5_initialized:
             if not self.initialize_mt5():
                 return None
 
-        try:
-            # Scarica dati OHLCV da MT5
-            rates = mt5.copy_rates_from_pos(
-                symbol, 
-                self.timeframes.get(timeframe, mt5.TIMEFRAME_H1), 
-                0, 
-                count
-            )
+        # Prova tutte le varianti del simbolo
+        variants = self.symbol_variants.get(symbol, [symbol])
+        
+        for variant in variants:
+            try:
+                # Scarica dati OHLCV da MT5
+                rates = mt5.copy_rates_from_pos(
+                    variant, 
+                    self.timeframes.get(timeframe, mt5.TIMEFRAME_H1), 
+                    0, 
+                    count
+                )
 
-            if rates is None:
-                logger.error(f"Nessun dato disponibile per {symbol}")
-                return None
+                if rates is not None and len(rates) > 50:  # Dati sufficienti
+                    # Converte in DataFrame pandas per analisi
+                    df = pd.DataFrame(rates)
+                    df['time'] = pd.to_datetime(df['time'], unit='s')
+                    df.set_index('time', inplace=True)
+                    
+                    logger.info(f"Dati trovati per {symbol} usando variante {variant}")
+                    return df
 
-            # Converte in DataFrame pandas per analisi
-            df = pd.DataFrame(rates)
-            df['time'] = pd.to_datetime(df['time'], unit='s')
-            df.set_index('time', inplace=True)
+            except Exception as e:
+                logger.debug(f"Variante {variant} non funziona: {e}")
+                continue
 
-            return df
-
-        except Exception as e:
-            logger.error(f"Errore scaricamento dati {symbol}: {e}")
-            return None
+        logger.error(f"Nessuna variante funzionante per {symbol}")
+        return None
 
     def calculate_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -308,10 +345,10 @@ class ProfessionalSignalEngine:
                 stop_loss = None
                 take_profit = None
 
-            # 7. Genera spiegazione AI
+            # 7. Genera spiegazione AI (fallback se Gemini non disponibile)
             explanation = self.generate_gemini_explanation(
                 symbol, signal_type, pa_scores, levels
-            )
+            ) or f"Segnale {signal_type.value} per {symbol} basato su analisi tecnica multi-indicatore."
 
             # 8. Crea oggetto segnale completo
             signal_data = {
@@ -354,7 +391,7 @@ class ProfessionalSignalEngine:
         Include motivi del segnale, fattori tecnici, rischi e suggerimenti
         """
         if not model:
-            return f"Segnale {signal_type.value} per {symbol} basato su analisi tecnica avanzata."
+            return self.generate_fallback_explanation(symbol, signal_type, scores)
 
         try:
             prompt = f"""Analizza questo segnale di trading per {symbol}:
@@ -375,8 +412,40 @@ class ProfessionalSignalEngine:
             return response.text
 
         except Exception as e:
-            logger.error(f"Errore generazione spiegazione Gemini: {e}")
-            return f"Segnale {signal_type.value} per {symbol} da analisi tecnica multi-indicatore."
+            logger.warning(f"Gemini non disponibile per {symbol}: {e}")
+            return self.generate_fallback_explanation(symbol, signal_type, scores)
+
+    def generate_fallback_explanation(
+        self,
+        symbol: str,
+        signal_type: SignalTypeEnum,
+        scores: Dict[str, float]
+    ) -> str:
+        """Genera spiegazione tecnica senza AI quando Gemini non è disponibile"""
+        
+        main_factors = []
+        
+        # Analizza i principali fattori tecnici
+        for factor, score in scores.items():
+            if abs(score) > 15:
+                if "trend" in factor.lower():
+                    main_factors.append("trend favorevole")
+                elif "rsi" in factor.lower():
+                    main_factors.append("RSI in zona favorevole")
+                elif "macd" in factor.lower():
+                    main_factors.append("segnale MACD positivo")
+                elif "bb" in factor.lower():
+                    main_factors.append("prezzo vicino a Bollinger Band")
+
+        factors_text = ", ".join(main_factors[:3]) if main_factors else "indicatori tecnici"
+        
+        explanations = {
+            SignalTypeEnum.BUY: f"Segnale rialzista su {symbol} supportato da {factors_text}. Momentum positivo e condizioni tecniche favorevoli per acquisti.",
+            SignalTypeEnum.SELL: f"Segnale ribassista su {symbol} basato su {factors_text}. Pressione vendita e setup tecnico negativo.",
+            SignalTypeEnum.HOLD: f"Mercato laterale su {symbol}. Segnali misti dagli indicatori tecnici. Attendere conferme per nuove posizioni."
+        }
+        
+        return explanations.get(signal_type, f"Analisi tecnica {signal_type.value} per {symbol}.")
 
     def shutdown(self):
         """Chiude connessione MT5"""
