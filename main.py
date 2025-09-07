@@ -23,6 +23,8 @@ from jwt_auth import (
     get_current_user, get_current_active_user, hash_password,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
+# IMPORT AGGIUNTO PER EMAIL
+from email_utils import send_registration_email
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -65,7 +67,7 @@ async def connect_to_mt5_bridge():
                 return data.get("mt5_initialized", False)
     except Exception as e:
         print(f"MT5 Bridge connection error: {e}")
-    return False
+        return False
 
 async def get_mt5_quotes(symbols: List[str] = None):
     """Fetch current quotes from MT5 Bridge"""
@@ -76,7 +78,6 @@ async def get_mt5_quotes(symbols: List[str] = None):
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             headers = {"X-API-Key": MT5_BRIDGE_API_KEY}
-            
             for symbol in symbols:
                 try:
                     # Get latest rates for the symbol
@@ -106,7 +107,6 @@ async def get_mt5_quotes(symbols: List[str] = None):
                 except Exception as e:
                     print(f"Error fetching {symbol}: {e}")
                     continue
-                    
     except Exception as e:
         print(f"MT5 quotes fetch error: {e}")
     
@@ -180,18 +180,17 @@ def health_check():
 
 @app.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    """Register new user with automatic trial subscription"""
+    """Register new user with automatic trial subscription and welcome email"""
     try:
         # Hash password
         hashed_password = hash_password(user.password)
-
+        
         # Create user
         db_user = User(
             username=user.username,
             email=user.email,
             hashed_password=hashed_password
         )
-
         db.add(db_user)
         db.flush()  # Get user ID
 
@@ -203,10 +202,14 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
             plan_name="trial",
             end_date=trial_end
         )
-
         db.add(subscription)
         db.commit()
         db.refresh(db_user)
+
+        # INVIO EMAIL DI BENVENUTO
+        print(f"🚀 Invio mail di benvenuto in corso a {db_user.email}")
+        esito_email = send_registration_email(db_user.email, db_user.username)
+        print(f"Mail inviata? ---> {esito_email}")
 
         return UserResponse(
             message="Utente registrato con successo. Trial di 7 giorni attivato!",
@@ -259,14 +262,13 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     refresh_token = create_refresh_token(data={"sub": user.username})
-
+    
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
     }
-
 
 @app.get("/api/landing/stats")
 def get_landing_page_stats(db: Session = Depends(get_db)):
@@ -292,7 +294,7 @@ def get_landing_page_stats(db: Session = Depends(get_db)):
             success_rate = (winning_signals / total_completed * 100) if total_completed > 0 else 95.0
         else:
             success_rate = 95.0
-        
+
         # Return real statistics for production
         return {
             "active_traders": total_users,
@@ -302,6 +304,7 @@ def get_landing_page_stats(db: Session = Depends(get_db)):
             "total_profits": int(sum([s.profit_loss for s in public_signals if s.profit_loss and s.profit_loss > 0])),
             "uptime": 99.9
         }
+
     except Exception as e:
         # Return fallback stats if database error
         return {
@@ -322,11 +325,11 @@ def get_recent_signals_preview(db: Session = Depends(get_db)):
             Signal.is_public == True,
             Signal.outcome.in_(["WIN", "LOSS"])
         ).order_by(Signal.created_at.desc()).limit(5).all()
-        
+
         if not recent_signals:
             # Return empty list if no real signals exist
             return {"signals": []}
-        
+
         # Format real signals
         formatted_signals = []
         for signal in recent_signals:
@@ -334,13 +337,13 @@ def get_recent_signals_preview(db: Session = Depends(get_db)):
             formatted_signals.append({
                 "pair": signal.asset,
                 "direction": signal.signal_type,
-                "profit_pips": abs(int(signal.profit_loss * 100)) if signal.profit_loss else random.randint(150, 350),
+                "profit_pips": abs(int(signal.profit_loss * 100)) if signal.profit_loss else 150,
                 "hours_ago": max(1, hours_ago),
                 "outcome": signal.outcome
             })
-        
+
         return {"signals": formatted_signals[:3]}  # Return top 3
-        
+
     except Exception as e:
         # Return empty data on error in production
         return {"signals": []}
@@ -354,12 +357,10 @@ def get_current_user_info(current_user: User = Depends(get_current_active_user),
         Signal.user_id == current_user.id,
         Signal.is_active == True
     ).count()
-
     winning_signals = db.query(Signal).filter(
         Signal.user_id == current_user.id,
         Signal.outcome == "WIN"
     ).count()
-
     losing_signals = db.query(Signal).filter(
         Signal.user_id == current_user.id,
         Signal.outcome == "LOSS"
@@ -474,11 +475,11 @@ def create_signal(
             gemini_explanation="Segnale creato manualmente dall'admin",
             expires_at=datetime.utcnow() + timedelta(hours=24)
         )
-
+        
         db.add(new_signal)
         db.commit()
         db.refresh(new_signal)
-
+        
         return SignalResponse(
             message="Segnale creato con successo",
             signal=new_signal
@@ -562,16 +563,16 @@ async def get_live_quotes(
 ):
     """Get live MT5 quotes for specified symbols"""
     global mt5_connection_active, last_quotes_update
-    
+
     # Parse symbols parameter
     symbol_list = None
     if symbols:
         symbol_list = [s.strip().upper() for s in symbols.split(",")]
-    
+
     # Check MT5 Bridge connection
     bridge_connected = await connect_to_mt5_bridge()
     mt5_connection_active = bridge_connected
-    
+
     if not bridge_connected:
         return {
             "status": "error",
@@ -579,11 +580,11 @@ async def get_live_quotes(
             "bridge_url": MT5_BRIDGE_URL,
             "quotes": {}
         }
-    
+
     # Get live quotes
     quotes = await get_mt5_quotes(symbol_list)
     last_quotes_update = datetime.utcnow()
-    
+
     return {
         "status": "success",
         "message": "Quotazioni aggiornate",
@@ -625,13 +626,12 @@ def create_demo_payment(
     try:
         # Get user subscription
         subscription = db.query(Subscription).filter(Subscription.user_id == current_user.id).first()
-        
         if not subscription:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Nessuna sottoscrizione trovata"
             )
-        
+
         # Simulate successful payment processing
         # In production, this would integrate with real Stripe
         subscription.status = "ACTIVE"
@@ -639,9 +639,8 @@ def create_demo_payment(
         subscription.end_date = datetime.utcnow() + timedelta(days=30)
         subscription.payment_status = "PAID"
         subscription.last_payment_date = datetime.utcnow()
-        
         db.commit()
-        
+
         return {
             "success": True,
             "message": "Pagamento simulato con successo! Account aggiornato a Pro.",
@@ -650,7 +649,7 @@ def create_demo_payment(
             "plan": "pro",
             "expires": subscription.end_date.isoformat()
         }
-        
+
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -665,7 +664,7 @@ def get_subscription_status(
 ):
     """Get current subscription status"""
     subscription = db.query(Subscription).filter(Subscription.user_id == current_user.id).first()
-    
+
     if not subscription:
         return {
             "status": "INACTIVE",
@@ -673,11 +672,11 @@ def get_subscription_status(
             "expires": None,
             "days_remaining": 0
         }
-    
+
     days_remaining = 0
     if subscription.end_date:
         days_remaining = max(0, (subscription.end_date - datetime.utcnow()).days)
-    
+
     return {
         "status": subscription.status,
         "plan": subscription.plan_name,
@@ -696,13 +695,12 @@ def download_expert_advisor(
     """Download AI Cash-Revolution Expert Advisor for MT5"""
     try:
         ea_file_path = "AI_Cash_Revolution_EA.mq5"
-        
         if not os.path.exists(ea_file_path):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Expert Advisor file not found"
             )
-        
+
         return FileResponse(
             path=ea_file_path,
             filename="AI_Cash_Revolution_EA.mq5",
@@ -711,7 +709,7 @@ def download_expert_advisor(
                 "Content-Disposition": "attachment; filename=AI_Cash_Revolution_EA.mq5"
             }
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -731,15 +729,14 @@ def receive_ea_heartbeat(
         balance = heartbeat_data.get('balance', 0)
         equity = heartbeat_data.get('equity', 0)
         trades = heartbeat_data.get('trades', 0)
-        
         print(f"EA Heartbeat - User: {current_user.username}, Account: {account_number}, Balance: {balance}, Trades: {trades}")
-        
+
         return {
             "status": "success",
             "message": "Heartbeat ricevuto",
             "server_time": datetime.utcnow().isoformat()
         }
-        
+
     except Exception as e:
         print(f"Errore heartbeat EA: {str(e)}")
         return {
@@ -760,14 +757,14 @@ def get_pending_orders(
             Signal.is_active == True,
             Signal.outcome == "PENDING"
         ).all()
-        
+
         if not pending_signals:
             return {
                 "status": "success",
                 "orders": [],
                 "message": "Nessun ordine pendente"
             }
-        
+
         # Converti in formato per EA
         orders = []
         for signal in pending_signals:
@@ -783,13 +780,13 @@ def get_pending_orders(
                 "explanation": signal.gemini_explanation,
                 "execute": True
             })
-        
+
         return {
             "status": "success",
             "orders": orders,
             "count": len(orders)
         }
-        
+
     except Exception as e:
         print(f"Errore pending orders: {str(e)}")
         return {
@@ -808,22 +805,21 @@ def confirm_order_execution(
     try:
         order_id = execution_data.get('order_id')
         executed = execution_data.get('executed', False)
-        
+
         # Trova e aggiorna il segnale
         signal = db.query(Signal).filter(Signal.id == order_id).first()
         if signal:
             signal.outcome = "WIN" if executed else "FAILED"
             signal.is_active = False if executed else True
             db.commit()
-            
-            print(f"Ordine {order_id} - Esecuzione: {executed}")
-        
+
+        print(f"Ordine {order_id} - Esecuzione: {executed}")
         return {
             "status": "success",
             "message": "Conferma ricevuta",
             "order_id": order_id
         }
-        
+
     except Exception as e:
         db.rollback()
         print(f"Errore conferma ordine: {str(e)}")
@@ -846,7 +842,7 @@ def receive_trade_confirmation(
         trade_type = trade_data.get('type', 0)
         volume = trade_data.get('volume', 0)
         price = trade_data.get('price', 0)
-        
+
         # Crea SignalExecution record
         execution = SignalExecution(
             signal_id=None,  # TODO: Collegare al segnale originale
@@ -855,18 +851,16 @@ def receive_trade_confirmation(
             quantity=volume,
             execution_type="AUTO"
         )
-        
         db.add(execution)
         db.commit()
-        
+
         print(f"Trade confermato - User: {current_user.username}, Ticket: {ticket}, Symbol: {symbol}")
-        
         return {
             "status": "success",
             "message": "Trade confirmation ricevuta",
             "ticket": ticket
         }
-        
+
     except Exception as e:
         db.rollback()
         print(f"Errore trade confirmation: {str(e)}")
