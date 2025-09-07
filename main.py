@@ -179,11 +179,14 @@ def health_check():
 # ========== AUTHENTICATION ENDPOINTS ==========
 
 @app.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    """Register new user with automatic trial subscription and welcome email"""
+def register_user(user: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Register new user with automatic trial subscription and welcome email (background)"""
     try:
+        print(f"🚀 Registrazione in corso per: {user.username} ({user.email})")
+        
         # Hash password
         hashed_password = hash_password(user.password)
+        print(f"🔐 Password hashata: {hashed_password[:20]}...")
         
         # Create user
         db_user = User(
@@ -206,10 +209,11 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(db_user)
 
-        # INVIO EMAIL DI BENVENUTO
-        print(f"🚀 Invio mail di benvenuto in corso a {db_user.email}")
-        esito_email = send_registration_email(db_user.email, db_user.username)
-        print(f"Mail inviata? ---> {esito_email}")
+        print(f"✅ Utente creato con ID: {db_user.id}")
+
+        # INVIO EMAIL IN BACKGROUND!
+        background_tasks.add_task(send_registration_email, db_user.email, db_user.username)
+        print(f"📧 Email di benvenuto programmata per {db_user.email}")
 
         return UserResponse(
             message="Utente registrato con successo. Trial di 7 giorni attivato!",
@@ -219,6 +223,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     except IntegrityError as e:
         db.rollback()
         error_info = str(e.orig)
+        print(f"❌ Errore IntegrityError: {error_info}")
         if "username" in error_info:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -236,6 +241,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
             )
     except Exception as e:
         db.rollback()
+        print(f"❌ Errore generico registrazione: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Errore interno del server"
@@ -243,9 +249,12 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=Token)
 def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    """Login user and return JWT tokens"""
+    """Login user and return JWT tokens - SUPPORTA USERNAME E EMAIL"""
+    print(f"🔐 Tentativo login da frontend per: {form_data.username}")
+    
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
+        print(f"❌ Login FALLITO per: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Username o password incorretti",
@@ -255,6 +264,7 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
     # Update last login
     user.last_login = datetime.utcnow()
     db.commit()
+    print(f"✅ Login riuscito per: {user.username}")
 
     # Create tokens
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)

@@ -21,31 +21,38 @@ def send_registration_email(to_email, username):
         <p style="font-size:16px;">Ciao <strong style="color:#00ff41;">{username}</strong>,<br>
         la tua registrazione è stata completata con successo.<br>
         Il <strong>trial gratuito di 7 giorni</strong> è ora attivo!</p>
+        
         <div style="margin: 30px 0 25px 0; background: #191c1d; border:1px solid #00ff41; border-radius:8px; padding:16px 22px;">
           <h3 style="color:#00ff41; margin-top:0; text-align:center;">🔒 I TUOI DATI DI ACCESSO</h3>
           <table style="width:100%; color:#e0e0e0; font-size:15px;">
-            <tr><td style="padding:6px; color:#00ff41;">Username:</td><td>{username}</td></tr>
-            <tr><td style="padding:6px; color:#00ff41;">Email:</td><td>{to_email}</td></tr>
-            <tr><td style="padding:6px; color:#00ff41;">Password:</td><td>La password scelta in fase di registrazione</td></tr>
-            <tr><td style="padding:6px; color:#00ff41;">Stato:</td><td><span style="color:#00ff41;">TRIAL ATTIVO</span></td></tr>
-            <tr><td style="padding:6px; color:#00ff41;">Trial scade il:</td><td>{trial_end_date}</td></tr>
+            <tr><td style="padding:6px; color:#00ff41; font-weight:bold;">Username:</td><td style="padding:6px;">{username}</td></tr>
+            <tr><td style="padding:6px; color:#00ff41; font-weight:bold;">Email:</td><td style="padding:6px;">{to_email}</td></tr>
+            <tr><td style="padding:6px; color:#00ff41; font-weight:bold;">Password:</td><td style="padding:6px;">La password scelta in fase di registrazione</td></tr>
+            <tr><td style="padding:6px; color:#00ff41; font-weight:bold;">Stato:</td><td style="padding:6px;"><span style="color:#00ff41; font-weight:bold;">TRIAL ATTIVO</span></td></tr>
+            <tr><td style="padding:6px; color:#00ff41; font-weight:bold;">Trial scade il:</td><td style="padding:6px; font-weight:bold;">{trial_end_date}</td></tr>
           </table>
         </div>
+        
         <div style="text-align:center;margin:32px 0;">
           <a href="{dashboard_url}" style="display:inline-block; background:linear-gradient(90deg,#00ff41,#00cc33); color:#000; text-decoration:none; padding:15px 37px; border-radius:25px; font-weight:bold; font-size:17px;">
             🚀 Accedi Subito alla Dashboard
           </a>
         </div>
+        
         <div style="background: #2a2a2a; border-radius: 8px; padding: 13px 15px; margin: 18px 0;">
+          <h4 style="color:#00ff41; margin-top:0;">✅ Cosa puoi fare da subito:</h4>
           <ul style="padding-left: 22px; line-height: 1.7;">
             <li>📈 Ricevi segnali di trading AI in tempo reale</li>
             <li>👤 Gestisci il tuo profilo e lo status abbonamento</li>
+            <li>⚙️ Configura MT5 per trading automatico</li>
             <li>⏳ Prova tutte le funzionalità Premium per 7 giorni</li>
           </ul>
         </div>
+        
         <p style="font-size:13px; background: #1a1a1a; padding:10px; border-radius:8px; margin-bottom:18px;">
-          <strong style="color:#00ff41;">Supporto:</strong> Per assistenza tecnica o domande, rispondi a questa email oppure scrivi a <a href="mailto:{from_email}" style="color:#00ff41;">{from_email}</a>
+          <strong style="color:#00ff41;">📞 Supporto:</strong> Per assistenza tecnica o domande, rispondi a questa email oppure scrivi a <a href="mailto:{from_email}" style="color:#00ff41;">{from_email}</a>
         </p>
+        
         <hr style="border:none; border-top:1px solid #333; margin:20px 0;">
         <p style="text-align:center; font-size:12px; color:#888;">
           AI Cash-Revolution – Trading Automatizzato<br>
@@ -55,6 +62,7 @@ def send_registration_email(to_email, username):
       </div>
     </div>
     """
+    
     # Plain text fallback (per sicurezza)
     text_body = f"""
 Ciao {username},
@@ -72,6 +80,9 @@ DATI DI ACCESSO:
 Accedi alla dashboard: {dashboard_url}
 
 Per assistenza: {from_email}
+
+AI Cash-Revolution - Trading Automatizzato
+Account creato il {now}
 """
 
     data = {

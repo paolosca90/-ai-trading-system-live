@@ -36,7 +36,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
     to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -49,17 +48,33 @@ def create_refresh_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+def get_user_by_username_or_email(db: Session, username_or_email: str):
+    """Get user by username OR email (supporta entrambi)"""
+    return db.query(User).filter(
+        (User.username == username_or_email) | (User.email == username_or_email)
+    ).first()
+
 def get_user_by_username(db: Session, username: str):
-    """Get user by username"""
+    """Get user by username (mantenuto per compatibilità)"""
     return db.query(User).filter(User.username == username).first()
 
-def authenticate_user(db: Session, username: str, password: str):
-    """Authenticate user"""
-    user = get_user_by_username(db, username)
+def authenticate_user(db: Session, username_or_email: str, password: str):
+    """Authenticate user - SUPPORTA LOGIN CON USERNAME O EMAIL + DEBUG"""
+    print(f"🔐 Tentativo login per: {username_or_email}")
+    
+    user = get_user_by_username_or_email(db, username_or_email)
     if not user:
+        print(f"❌ Utente NON trovato: {username_or_email}")
         return False
+    
+    print(f"✅ Utente trovato - ID: {user.id}, Username: {user.username}, Email: {user.email}")
+    print(f"🔑 Hash salvato: {user.hashed_password[:20]}...")
+    
     if not verify_password(password, user.hashed_password):
+        print(f"❌ Password ERRATA per {username_or_email}")
         return False
+    
+    print(f"✅ Login RIUSCITO per {user.username}")
     return user
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -74,10 +89,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         token_type: str = payload.get("type")
-
         if username is None or token_type != "access":
             raise credentials_exception
-
     except JWTError:
         raise credentials_exception
 
