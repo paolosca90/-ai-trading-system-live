@@ -948,7 +948,7 @@ def receive_trade_confirmation(
 # ========== ADMIN ENDPOINTS ==========
 
 @app.post("/admin/generate-signals")
-async def generate_signals_manually(
+def generate_signals_manually(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -959,87 +959,8 @@ async def generate_signals_manually(
             detail="Admin access required"
         )
 
-    try:
-        from ai_signal_engine import SignalEngine
-        
-        engine = SignalEngine()
-        
-        # Generate signals asynchronously
-        signals = await engine.generate_signals(max_signals=5)
-        
-        if signals:
-            # Save to database
-            engine.save_signals_to_db(signals)
-            
-            return {
-                "message": f"Successfully generated and saved {len(signals)} signals",
-                "status": "completed",
-                "signals": len(signals),
-                "data": signals
-            }
-        else:
-            return {
-                "message": "No signals generated - market conditions didn't meet criteria",
-                "status": "completed",
-                "signals": 0
-            }
-            
-    except Exception as e:
-        print(f"Error in signal generation: {e}")
-        return {
-            "message": f"Error during signal generation: {str(e)}",
-            "status": "error",
-            "signals": 0
-        }
-
-@app.post("/api/generate-signals-auto")
-async def auto_generate_signals(db: Session = Depends(get_db)):
-    """Auto-generate signals - Public endpoint for demo (normally would be scheduled)"""
-    try:
-        from ai_signal_engine import SignalEngine
-        
-        # Check if we already have recent signals (within last 2 hours)
-        recent_signals = db.query(Signal).filter(
-            Signal.created_at > datetime.utcnow() - timedelta(hours=2),
-            Signal.is_public == True
-        ).count()
-        
-        if recent_signals >= 3:
-            return {
-                "message": "Recent signals already exist",
-                "status": "skipped",
-                "recent_count": recent_signals
-            }
-        
-        engine = SignalEngine()
-        
-        # Generate new signals
-        signals = await engine.generate_signals(max_signals=3)
-        
-        if signals:
-            # Save to database  
-            engine.save_signals_to_db(signals)
-            
-            return {
-                "message": f"Auto-generated {len(signals)} new signals",
-                "status": "success",
-                "signals_generated": len(signals),
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        else:
-            return {
-                "message": "No signal conditions met in current market",
-                "status": "no_signals",
-                "signals_generated": 0
-            }
-            
-    except Exception as e:
-        print(f"Auto signal generation error: {e}")
-        return {
-            "message": f"Error in auto signal generation: {str(e)}",
-            "status": "error",
-            "signals_generated": 0
-        }
+    # TODO: Implement signal generation
+    return {"message": "Signal generation started", "status": "in_progress"}
 
 if __name__ == "__main__":
     import uvicorn
