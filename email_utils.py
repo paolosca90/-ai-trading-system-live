@@ -9,7 +9,7 @@ def send_registration_email(to_email, username):
     resend_api_key = os.getenv('RESEND_API_KEY', 're_7Zrgq4ei_5iC1z17Z9aE1sWyWbTATc7AJ')
     from_email = os.getenv('FROM_EMAIL', 'support@cash-revolution.com')
     trial_end_date = (datetime.now() + timedelta(days=7)).strftime('%d/%m/%Y')
-    dashboard_url = "https://www.cash-revolution.com/dashboard.html"
+    login_url = "https://www.cash-revolution.com/login.html"
     now = datetime.now().strftime('%d/%m/%Y alle %H:%M')
 
     html_body = f"""
@@ -34,8 +34,8 @@ def send_registration_email(to_email, username):
         </div>
         
         <div style="text-align:center;margin:32px 0;">
-          <a href="{dashboard_url}" style="display:inline-block; background:linear-gradient(90deg,#00ff41,#00cc33); color:#000; text-decoration:none; padding:15px 37px; border-radius:25px; font-weight:bold; font-size:17px;">
-            🚀 Accedi Subito alla Dashboard
+          <a href="{login_url}" style="display:inline-block; background:linear-gradient(90deg,#00ff41,#00cc33); color:#000; text-decoration:none; padding:15px 37px; border-radius:25px; font-weight:bold; font-size:17px;">
+            🚀 Fai login nel tuo account
           </a>
         </div>
         
@@ -77,7 +77,7 @@ DATI DI ACCESSO:
 - Stato: TRIAL ATTIVO
 - Trial scade il: {trial_end_date}
 
-Accedi alla dashboard: {dashboard_url}
+Accedi al login: {login_url}
 
 Per assistenza: {from_email}
 
