@@ -16,8 +16,7 @@ from models import Base, User, Signal, Subscription, MT5Connection, SignalExecut
 from schemas import (
     UserCreate, UserResponse, Token, SignalCreate, SignalOut,
     SignalResponse, TopSignalsResponse, MT5ConnectionCreate, MT5ConnectionOut,
-    SignalExecutionCreate, SignalExecutionOut, SignalFilter, UserStatsOut,
-    TrialSignup
+    SignalExecutionCreate, SignalExecutionOut, SignalFilter, UserStatsOut
 )
 from jwt_auth import (
     authenticate_user, create_access_token, create_refresh_token,
@@ -190,10 +189,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         db_user = User(
             username=user.username,
             email=user.email,
-            hashed_password=hashed_password,
-            full_name=user.full_name,
-            phone=user.phone,
-            trading_experience=user.trading_experience
+            hashed_password=hashed_password
         )
 
         db.add(db_user)
@@ -271,81 +267,6 @@ def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = D
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
     }
 
-@app.post("/api/trial-signup", status_code=status.HTTP_201_CREATED)
-def trial_signup(trial_data: TrialSignup, db: Session = Depends(get_db)):
-    """Handle trial signup from landing page"""
-    try:
-        # Check if email already exists
-        existing_user = db.query(User).filter(User.email == trial_data.email).first()
-        if existing_user:
-            return {
-                "success": True,
-                "message": "You're already registered! Check your email for login details.",
-                "already_registered": True
-            }
-        
-        # Generate username from email
-        username = trial_data.email.split('@')[0]
-        counter = 1
-        original_username = username
-        
-        # Ensure unique username
-        while db.query(User).filter(User.username == username).first():
-            username = f"{original_username}{counter}"
-            counter += 1
-        
-        # Generate a temporary password (user will set their own later)
-        import secrets
-        temp_password = secrets.token_urlsafe(12)
-        hashed_password = hash_password(temp_password)
-        
-        # Create user
-        db_user = User(
-            username=username,
-            email=trial_data.email,
-            hashed_password=hashed_password,
-            full_name=trial_data.fullName,
-            phone=trial_data.phone
-        )
-        
-        db.add(db_user)
-        db.flush()  # Get user ID
-        
-        # Create trial subscription
-        trial_end = datetime.utcnow() + timedelta(days=7)  # 7-day trial
-        subscription = Subscription(
-            user_id=db_user.id,
-            status="TRIAL",
-            plan_name="trial",
-            end_date=trial_end
-        )
-        
-        db.add(subscription)
-        db.commit()
-        db.refresh(db_user)
-        
-        # TODO: Send welcome email with setup instructions
-        # TODO: Send trial credentials and setup guide
-        
-        return {
-            "success": True,
-            "message": "Welcome to AI Cash-Revolution! Check your email for setup instructions.",
-            "trial_expires": trial_end.isoformat(),
-            "setup_required": True
-        }
-        
-    except IntegrityError as e:
-        db.rollback()
-        return {
-            "success": False,
-            "message": "Registration failed. Please try again or contact support."
-        }
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error during registration"
-        )
 
 @app.get("/api/landing/stats")
 def get_landing_page_stats(db: Session = Depends(get_db)):

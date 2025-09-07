@@ -101,14 +101,6 @@
                         <form id="register-form" class="register-form">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="fullName">Nome Completo *</label>
-                                    <input type="text" id="fullName" name="fullName" required>
-                                    <div class="input-icon">👤</div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
                                     <label for="username">Username *</label>
                                     <input type="text" id="username" name="username" required>
                                     <div class="input-icon">@</div>
@@ -127,44 +119,13 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="password">Password *</label>
-                                    <input type="password" id="password" name="password" required minlength="8">
+                                    <input type="password" id="password" name="password" required minlength="6">
                                     <div class="input-icon">🔒</div>
                                     <button type="button" class="password-toggle" onclick="togglePassword('password')">👁</button>
                                     <div class="password-strength">
                                         <div class="strength-bar"></div>
                                         <span class="strength-text">Forza password</span>
                                     </div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="confirmPassword">Conferma Password *</label>
-                                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="8">
-                                    <div class="input-icon">🔒</div>
-                                    <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword')">👁</button>
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="phone">Telefono</label>
-                                    <input type="tel" id="phone" name="phone">
-                                    <div class="input-icon">📱</div>
-                                    <div class="input-help">Opzionale - per notifiche SMS</div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="experience">Esperienza Trading *</label>
-                                    <select id="experience" name="experience" required>
-                                        <option value="">Seleziona il tuo livello</option>
-                                        <option value="beginner">Principiante (0-1 anni)</option>
-                                        <option value="intermediate">Intermedio (1-5 anni)</option>
-                                        <option value="advanced">Avanzato (5+ anni)</option>
-                                        <option value="professional">Professionale (10+ anni)</option>
-                                    </select>
                                 </div>
                             </div>
                             
@@ -245,10 +206,7 @@
                 const data = {
                     username: formData.get('username'),
                     email: formData.get('email'),
-                    password: formData.get('password'),
-                    full_name: formData.get('fullName'),
-                    phone: formData.get('phone'),
-                    trading_experience: formData.get('experience')
+                    password: formData.get('password')
                 };
                 
                 try {

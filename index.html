@@ -519,11 +519,6 @@
                         
                         <form id="trial-signup-form" class="signup-form">
                             <div class="form-group">
-                                <label for="fullName">Full Name</label>
-                                <input type="text" id="fullName" name="fullName">
-                            </div>
-                            
-                            <div class="form-group">
                                 <label for="username">Username</label>
                                 <input type="text" id="username" name="username" required>
                             </div>
@@ -538,21 +533,6 @@
                                 <input type="password" id="password" name="password" required minlength="6">
                             </div>
                             
-                            <div class="form-group">
-                                <label for="phone">Phone Number</label>
-                                <input type="tel" id="phone" name="phone">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="experience">Trading Experience</label>
-                                <select id="experience" name="experience">
-                                    <option value="">Select your level</option>
-                                    <option value="beginner">Beginner (0-1 years)</option>
-                                    <option value="intermediate">Intermediate (1-5 years)</option>
-                                    <option value="advanced">Advanced (5+ years)</option>
-                                </select>
-                            </div>
-                            
                             <div class="form-checkbox">
                                 <input type="checkbox" id="terms" name="terms" required>
                                 <label for="terms">
@@ -561,10 +541,10 @@
                                 </label>
                             </div>
                             
-                            <button type="submit" class="form-submit">
+                            <a href="register.html" class="form-submit" style="display: inline-block; text-decoration: none; text-align: center;">
                                 <span class="submit-text">Start Free Trial</span>
                                 <span class="submit-icon">→</span>
-                            </button>
+                            </a>
                         </form>
                         
                         <div class="form-footer">

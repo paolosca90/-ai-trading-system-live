@@ -3,22 +3,16 @@
 // API Integration for User Registration - Use correct endpoint and payload
 async function submitTrialForm(formData) {
     try {
-        // Use the correct registration endpoint with proper payload format
+        // Use the correct registration endpoint with simplified payload format
         const registrationData = {
             username: formData.get('username'),
             email: formData.get('email'),
-            password: formData.get('password'),
-            full_name: formData.get('fullName') || null,
-            phone: formData.get('phone') || null,
-            trading_experience: formData.get('experience') || null
+            password: formData.get('password')
         };
         
-        console.log('Submitting registration form with correct data:', {
+        console.log('Submitting registration form with simplified data:', {
             username: registrationData.username,
-            email: registrationData.email,
-            full_name: registrationData.full_name,
-            phone: registrationData.phone,
-            trading_experience: registrationData.trading_experience
+            email: registrationData.email
         });
         
         const response = await fetch(CONFIG.API_BASE_URL + '/register', {
@@ -204,10 +198,6 @@ function createAuthModals() {
                     </div>
                     <form id="registerForm" class="auth-form">
                         <div class="form-group">
-                            <label for="regFullName">Nome Completo</label>
-                            <input type="text" id="regFullName" name="fullName">
-                        </div>
-                        <div class="form-group">
                             <label for="regUsername">Username</label>
                             <input type="text" id="regUsername" name="username" required>
                         </div>
@@ -218,19 +208,6 @@ function createAuthModals() {
                         <div class="form-group">
                             <label for="regPassword">Password</label>
                             <input type="password" id="regPassword" name="password" required minlength="6">
-                        </div>
-                        <div class="form-group">
-                            <label for="regPhone">Telefono</label>
-                            <input type="tel" id="regPhone" name="phone">
-                        </div>
-                        <div class="form-group">
-                            <label for="regExperience">Esperienza di Trading</label>
-                            <select id="regExperience" name="experience">
-                                <option value="">Seleziona il tuo livello</option>
-                                <option value="beginner">Principiante (0-1 anni)</option>
-                                <option value="intermediate">Intermedio (1-5 anni)</option>
-                                <option value="advanced">Avanzato (5+ anni)</option>
-                            </select>
                         </div>
                         <div class="form-checkbox">
                             <input type="checkbox" id="regTerms" name="terms" required>
@@ -391,11 +368,8 @@ async function handleRegister(e) {
         
         // Validate form data
         const username = formData.get('username')?.trim();
-        const fullName = formData.get('fullName')?.trim();
         const email = formData.get('email')?.trim();
         const password = formData.get('password')?.trim();
-        const phone = formData.get('phone')?.trim();
-        const experience = formData.get('experience');
         
         if (!username || !email || !password) {
             throw new Error('Username, email e password sono obbligatori');
@@ -409,23 +383,17 @@ async function handleRegister(e) {
             throw new Error('La password deve essere di almeno 6 caratteri');
         }
         
-        // Use correct registration endpoint with proper payload format
+        // Use correct registration endpoint with simplified payload format
         console.log('Attempting user registration...');
         const registrationData = {
             username: username,
             email: email,
-            password: password,
-            full_name: fullName || null,
-            phone: phone || null,
-            trading_experience: experience || null
+            password: password
         };
         
         console.log('Sending registration data:', {
             username: registrationData.username,
-            email: registrationData.email,
-            full_name: registrationData.full_name,
-            phone: registrationData.phone,
-            trading_experience: registrationData.trading_experience
+            email: registrationData.email
         });
         
         const response = await fetch(CONFIG.API_BASE_URL + '/register', {
@@ -884,11 +852,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Validate form data
         const username = formData.get('username')?.trim();
-        const fullName = formData.get('fullName')?.trim();
         const email = formData.get('email')?.trim();
         const password = formData.get('password')?.trim();
-        const phone = formData.get('phone')?.trim();
-        const experience = formData.get('experience');
         
         if (!username || !email || !password) {
             showErrorMessage('Username, email e password sono obbligatori');
@@ -909,23 +874,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
-            // Use correct registration endpoint with proper payload format
+            // Use correct registration endpoint with simplified payload format
             console.log('Attempting user registration from trial form...');
             const registrationData = {
                 username: username,
                 email: email,
-                password: password,
-                full_name: fullName || null,
-                phone: phone || null,
-                trading_experience: experience || null
+                password: password
             };
             
             console.log('Sending registration data:', {
                 username: registrationData.username,
-                email: registrationData.email,
-                full_name: registrationData.full_name,
-                phone: registrationData.phone,
-                trading_experience: registrationData.trading_experience
+                email: registrationData.email
             });
             
             const response = await fetch(CONFIG.API_BASE_URL + '/register', {

@@ -7,15 +7,6 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
-    trading_experience: Optional[str] = None
-
-class TrialSignup(BaseModel):
-    fullName: str
-    email: EmailStr
-    phone: str
-    experience: str
 
 class UserOut(BaseModel):
     id: int
