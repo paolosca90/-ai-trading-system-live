@@ -1,6 +1,13 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import Optional, List
+from enum import Enum
+
+# Signal type enum
+class SignalTypeEnum(str, Enum):
+    BUY = "BUY"
+    SELL = "SELL" 
+    HOLD = "HOLD"
 
 # User schemas
 class UserCreate(BaseModel):

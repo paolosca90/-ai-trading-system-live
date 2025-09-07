@@ -8,7 +8,6 @@ from typing import Dict, List, Optional, Tuple
 import logging
 import google.generativeai as genai
 from sqlalchemy.orm import Session
-from models import Signal, MarketData
 from schemas import SignalTypeEnum
 
 # Configure logging
@@ -38,10 +37,27 @@ class ProfessionalSignalEngine:
     def __init__(self):
         self.mt5_initialized = False
 
-        # Asset supportati dal sistema
+        # Asset supportati dal sistema - FOREX MAJOR + MINOR + METALS + INDICES
         self.supported_symbols = [
+            # FOREX MAJOR PAIRS
             "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD",
-            "XAUUSD", "XAGUSD", "US30", "US500", "NAS100", "BTCUSD", "ETHUSD"
+            
+            # FOREX MINOR PAIRS (CROSSES)  
+            "EURGBP", "EURJPY", "EURCHF", "EURAUD", "EURCAD", "EURNZD",
+            "GBPJPY", "GBPCHF", "GBPAUD", "GBPCAD", "GBPNZD",
+            "AUDJPY", "AUDCHF", "AUDCAD", "AUDNZD",
+            "CADJPY", "CADCHF", "NZDJPY", "NZDCHF", "NZDCAD",
+            "CHFJPY",
+            
+            # METALS
+            "XAUUSD", "XAGUSD", "XAUEUR", "XAUAUD", "XAUCAD", "XAUGBP",
+            
+            # INDICES
+            "SP500", "US500", "NASDAQ", "NAS100", "US30", "DJ30", "DAX30", "UK100", "FRA40", "ESP35", "ITA40",
+            "AUS200", "JPN225", "HK50", "CHINA50",
+            
+            # CRYPTO (if available)
+            "BTCUSD", "ETHUSD", "LTCUSD", "XRPUSD", "ADAUSD"
         ]
 
         # Timeframes per analisi multi-frame
