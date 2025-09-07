@@ -1,4 +1,23 @@
 // ===== Main JavaScript for AI Cash-Revolution Landing Page =====
+function trackConversion(event, userEmail) {
+    // Google Analytics (opzionale)
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'conversion', {
+            send_to: 'AW-CONVERSION_ID/CONVERSION_LABEL',
+            event_category: 'signup',
+            event_label: event
+        });
+    }
+    // Facebook Pixel (opzionale)
+    if (typeof fbq !== 'undefined') {
+        fbq('track', 'Lead', {
+            content_name: 'Free Trial Signup',
+            content_category: 'Trading Signals'
+        });
+    }
+    // Log di debug, sempre presente
+    console.log('Conversion tracked:', event, userEmail);
+}
 
 // API Integration for User Registration - Use correct endpoint and payload
 async function submitTrialForm(formData) {
