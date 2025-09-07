@@ -56,6 +56,34 @@ MT5_BRIDGE_API_KEY = os.getenv("MT5_BRIDGE_API_KEY", "1d2376ae63aedb38f4d13e1041
 mt5_connection_active = False
 last_quotes_update = None
 
+# Utility functions
+def safe_date_diff_days(end_date, start_date=None):
+    """
+    Safely calculate difference in days between two dates, handling timezone issues
+    """
+    if not end_date:
+        return 0
+        
+    if start_date is None:
+        start_date = datetime.utcnow()
+    
+    try:
+        # Handle timezone-aware and naive datetime comparison
+        if end_date.tzinfo is not None:
+            # end_date is timezone-aware
+            if start_date.tzinfo is None:
+                from datetime import timezone
+                start_date = start_date.replace(tzinfo=timezone.utc)
+        else:
+            # end_date is naive
+            if hasattr(start_date, 'tzinfo') and start_date.tzinfo is not None:
+                start_date = start_date.replace(tzinfo=None)
+        
+        return max(0, (end_date - start_date).days)
+    except Exception as e:
+        print(f"Date calculation error: {e}")
+        return 0
+
 # MT5 Bridge Helper Functions
 async def connect_to_mt5_bridge():
     """Test connection to MT5 Bridge service"""
@@ -393,7 +421,7 @@ def get_current_user_info(current_user: User = Depends(get_current_active_user),
     subscription_status = subscription.status if subscription else "INACTIVE"
     days_left = None
     if subscription and subscription.end_date:
-        days_left = max(0, (subscription.end_date - datetime.utcnow()).days)
+        days_left = safe_date_diff_days(subscription.end_date)
 
     return UserStatsOut(
         total_signals=total_signals,
@@ -723,7 +751,7 @@ def get_subscription_status(
 
     days_remaining = 0
     if subscription.end_date:
-        days_remaining = max(0, (subscription.end_date - datetime.utcnow()).days)
+        days_remaining = safe_date_diff_days(subscription.end_date)
 
     return {
         "status": subscription.status,
