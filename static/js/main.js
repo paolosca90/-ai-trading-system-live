@@ -350,39 +350,102 @@ async function handleRegister(e) {
     
     try {
         const formData = new FormData(form);
+        
+        // Validate form data
+        const fullName = formData.get('fullName')?.trim();
+        const email = formData.get('email')?.trim();
+        const phone = formData.get('phone')?.trim();
+        const experience = formData.get('experience');
+        
+        if (!fullName || !email || !phone || !experience) {
+            throw new Error('Tutti i campi sono obbligatori');
+        }
+        
+        if (!validateEmail(email)) {
+            throw new Error('Inserisci un indirizzo email valido');
+        }
+        
+        // Try trial signup endpoint first (as per API schema)
+        let response, result;
+        
+        try {
+            console.log('Attempting trial signup...');
+            response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Origin': window.location.origin
+                },
+                body: JSON.stringify({
+                    fullName: fullName,
+                    email: email,
+                    phone: phone,
+                    experience: experience
+                })
+            });
+            
+            result = await response.json();
+            
+            if (response.ok) {
+                showSuccessMessage('Registrazione completata! Controlla la tua email per le credenziali di accesso.');
+                hideAuthModal('registerModal');
+                form.reset();
+                trackConversion('registration', email);
+                return;
+            }
+        } catch (trialError) {
+            console.log('Trial signup failed, trying main register endpoint:', trialError);
+        }
+        
+        // Fallback to main register endpoint
+        console.log('Attempting main registration...');
         const data = {
-            username: formData.get('fullName').toLowerCase().replace(/\s+/g, ''),
-            email: formData.get('email'),
+            username: fullName.toLowerCase().replace(/\s+/g, ''),
+            email: email,
             password: 'temp_' + Math.random().toString(36).substr(2, 9),
-            full_name: formData.get('fullName'),
-            phone: formData.get('phone'),
-            trading_experience: formData.get('experience')
+            full_name: fullName,
+            phone: phone,
+            trading_experience: experience
         };
         
-        const response = await fetch(CONFIG.API_BASE_URL + '/register', {
+        response = await fetch(CONFIG.API_BASE_URL + '/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Origin': window.location.origin
             },
             body: JSON.stringify(data)
         });
         
-        const result = await response.json();
+        result = await response.json();
         
         if (response.ok) {
             showSuccessMessage('Registrazione completata! Controlla la tua email per le credenziali.');
             hideAuthModal('registerModal');
             form.reset();
-            
-            // Track conversion
-            trackConversion('registration', data.email);
+            trackConversion('registration', email);
         } else {
-            throw new Error(result.detail || 'Registrazione fallita');
+            // Handle specific error cases
+            let errorMessage = 'Errore durante la registrazione. Riprova.';
+            
+            if (response.status === 409) {
+                errorMessage = 'Questo indirizzo email è già registrato.';
+            } else if (response.status === 422) {
+                errorMessage = 'Dati non validi. Controlla i campi del modulo.';
+            } else if (response.status === 500) {
+                errorMessage = 'Servizio temporaneamente non disponibile. Ti preghiamo di riprovare tra qualche minuto o contattare il supporto.';
+            } else if (result.detail) {
+                errorMessage = result.detail;
+            }
+            
+            throw new Error(errorMessage);
         }
         
     } catch (error) {
         console.error('Registration error:', error);
-        showErrorMessage('Errore durante la registrazione. Riprova.');
+        showErrorMessage(error.message || 'Errore durante la registrazione. Riprova.');
     } finally {
         // Reset button state
         btnText.style.display = 'inline';
@@ -396,6 +459,202 @@ function logout() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('token_type');
     window.location.href = 'index.html';
+}
+
+// ===== Message Display Functions (Global Scope) =====
+function showSuccessMessage(customMessage) {
+    // Remove any existing messages
+    const existingMessages = document.querySelectorAll('.success-message, .error-message');
+    existingMessages.forEach(msg => msg.remove());
+    
+    const message = document.createElement('div');
+    message.className = 'success-message';
+    message.innerHTML = `
+        <div class="message-content">
+            <div class="message-icon">✓</div>
+            <div class="message-text">
+                <h3>Registrazione Completata!</h3>
+                <p>${customMessage || 'Controlla la tua email per le credenziali di accesso. Riceverai i primi segnali entro 60 secondi.'}</p>
+            </div>
+            <button class="message-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+        </div>
+    `;
+    
+    document.body.appendChild(message);
+    
+    // Auto-hide after 8 seconds
+    setTimeout(() => {
+        if (message.parentElement) {
+            message.style.opacity = '0';
+            setTimeout(() => {
+                if (message.parentElement) {
+                    message.remove();
+                }
+            }, 300);
+        }
+    }, 8000);
+    
+    // Add success message styles
+    addSuccessMessageStyles();
+}
+
+function showErrorMessage(customMessage) {
+    // Remove any existing messages
+    const existingMessages = document.querySelectorAll('.success-message, .error-message');
+    existingMessages.forEach(msg => msg.remove());
+    
+    const message = document.createElement('div');
+    message.className = 'error-message';
+    message.innerHTML = `
+        <div class="message-content">
+            <div class="message-icon">⚠</div>
+            <div class="message-text">
+                <h3>Errore di Registrazione</h3>
+                <p>${customMessage || 'Riprova o contatta il supporto se il problema persiste.'}</p>
+            </div>
+            <button class="message-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
+        </div>
+    `;
+    
+    document.body.appendChild(message);
+    
+    // Auto-hide after 10 seconds (longer for error messages)
+    setTimeout(() => {
+        if (message.parentElement) {
+            message.style.opacity = '0';
+            setTimeout(() => {
+                if (message.parentElement) {
+                    message.remove();
+                }
+            }, 300);
+        }
+    }, 10000);
+    
+    addErrorMessageStyles();
+}
+
+function addSuccessMessageStyles() {
+    if (document.querySelector('#success-message-styles')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'success-message-styles';
+    style.textContent = `
+        .success-message, .error-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid #00ff41;
+            border-radius: 15px;
+            padding: 20px 50px 20px 20px;
+            max-width: 450px;
+            opacity: 1;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 255, 65, 0.3);
+        }
+        
+        .error-message {
+            border-color: #ff4040;
+        }
+        
+        .message-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            position: relative;
+        }
+        
+        .message-close {
+            position: absolute;
+            top: -5px;
+            right: -30px;
+            background: transparent;
+            border: none;
+            color: #00ff41;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+            transition: color 0.2s ease;
+        }
+        
+        .error-message .message-close {
+            color: #ff4040;
+        }
+        
+        .message-close:hover {
+            color: #ffffff;
+            transform: scale(1.1);
+        }
+        
+        .message-icon {
+            font-size: 2rem;
+            color: #00ff41;
+        }
+        
+        .error-message .message-icon {
+            color: #ff4040;
+        }
+        
+        .message-text h3 {
+            margin: 0 0 5px 0;
+            color: #00ff41;
+            font-size: 1.1rem;
+        }
+        
+        .error-message .message-text h3 {
+            color: #ff4040;
+        }
+        
+        .message-text p {
+            margin: 0;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .success-message, .error-message {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+                padding: 15px 40px 15px 15px;
+            }
+            
+            .message-close {
+                right: -25px;
+                font-size: 18px;
+            }
+            
+            .message-text h3 {
+                font-size: 1rem;
+            }
+            
+            .message-text p {
+                font-size: 0.85rem;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function addErrorMessageStyles() {
+    addSuccessMessageStyles(); // Uses same styles
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -593,170 +852,100 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Collect form data
         const formData = new FormData(signupForm);
-        const data = {
-            username: formData.get('fullName').toLowerCase().replace(/\s+/g, ''),
-            email: formData.get('email'),
-            password: 'temp_' + Math.random().toString(36).substr(2, 9), // Temporary password
-            full_name: formData.get('fullName'),
-            phone: formData.get('phone'),
-            trading_experience: formData.get('experience')
-        };
+        
+        // Validate form data
+        const fullName = formData.get('fullName')?.trim();
+        const email = formData.get('email')?.trim();
+        const phone = formData.get('phone')?.trim();
+        const experience = formData.get('experience');
+        
+        if (!fullName || !email || !phone || !experience) {
+            showErrorMessage('Tutti i campi sono obbligatori');
+            resetButtonState();
+            return;
+        }
+        
+        if (!validateEmail(email)) {
+            showErrorMessage('Inserisci un indirizzo email valido');
+            resetButtonState();
+            return;
+        }
         
         try {
-            // Call the actual FastAPI endpoint using the backend URL
-            const response = await fetch(CONFIG.API_BASE_URL + '/register', {
+            // Try trial signup endpoint first (more appropriate for landing page form)
+            let response, result;
+            
+            console.log('Attempting trial signup from landing page...');
+            response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Origin': window.location.origin
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    fullName: fullName,
+                    email: email,
+                    phone: phone,
+                    experience: experience
+                })
             });
             
+            result = await response.json();
+            
             if (response.ok) {
-                const result = await response.json();
-                showSuccessMessage(result.message);
+                showSuccessMessage('Registrazione completata! Controlla la tua email per le credenziali di accesso.');
                 signupForm.reset();
-                
-                // Track conversion
-                trackConversion('trial_signup', data.email);
+                trackConversion('trial_signup', email);
             } else {
-                const errorResult = await response.json();
-                throw new Error(errorResult.message || 'Registration failed');
+                // If trial signup fails, try full registration as fallback
+                console.log('Trial signup failed, attempting full registration...');
+                
+                const registrationData = {
+                    username: fullName.toLowerCase().replace(/\s+/g, ''),
+                    email: email,
+                    password: 'temp_' + Math.random().toString(36).substr(2, 9),
+                    full_name: fullName,
+                    phone: phone,
+                    trading_experience: experience
+                };
+                
+                response = await fetch(CONFIG.API_BASE_URL + '/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    body: JSON.stringify(registrationData)
+                });
+                
+                result = await response.json();
+                
+                if (response.ok) {
+                    showSuccessMessage('Registrazione completata! Controlla la tua email per le credenziali.');
+                    signupForm.reset();
+                    trackConversion('trial_signup', email);
+                } else {
+                    handleRegistrationError(response, result);
+                }
             }
             
         } catch (error) {
             console.error('Form submission error:', error);
-            showErrorMessage('Errore durante la registrazione. Riprova.');
+            showErrorMessage('Errore durante la registrazione. Verifica la connessione internet e riprova.');
         } finally {
-            // Reset button state
+            resetButtonState();
+        }
+        
+        function resetButtonState() {
             submitButton.classList.remove('loading');
             submitButton.querySelector('.submit-text').textContent = originalText;
             submitButton.disabled = false;
         }
     }
     
-    function showSuccessMessage(customMessage) {
-        const message = document.createElement('div');
-        message.className = 'success-message';
-        message.innerHTML = `
-            <div class="message-content">
-                <div class="message-icon">✓</div>
-                <div class="message-text">
-                    <h3>Welcome to the Matrix!</h3>
-                    <p>${customMessage || 'Check your email for setup instructions. You\'ll be receiving signals within 60 seconds.'}</p>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(message);
-        
-        setTimeout(() => {
-            message.style.opacity = '0';
-            setTimeout(() => message.remove(), 300);
-        }, 5000);
-        
-        // Add success message styles
-        addSuccessMessageStyles();
-    }
-    
-    function showErrorMessage(customMessage) {
-        const message = document.createElement('div');
-        message.className = 'error-message';
-        message.innerHTML = `
-            <div class="message-content">
-                <div class="message-icon">⚠</div>
-                <div class="message-text">
-                    <h3>Registration Failed</h3>
-                    <p>${customMessage || 'Please try again or contact support if the problem persists.'}</p>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(message);
-        
-        setTimeout(() => {
-            message.style.opacity = '0';
-            setTimeout(() => message.remove(), 300);
-        }, 5000);
-        
-        addErrorMessageStyles();
-    }
-    
-    function addSuccessMessageStyles() {
-        if (document.querySelector('#success-message-styles')) return;
-        
-        const style = document.createElement('style');
-        style.id = 'success-message-styles';
-        style.textContent = `
-            .success-message, .error-message {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 10000;
-                background: rgba(0, 0, 0, 0.95);
-                border: 2px solid #00ff41;
-                border-radius: 15px;
-                padding: 20px;
-                max-width: 400px;
-                opacity: 1;
-                transition: all 0.3s ease;
-                backdrop-filter: blur(10px);
-                animation: slideIn 0.3s ease;
-            }
-            
-            .error-message {
-                border-color: #ff4040;
-            }
-            
-            .message-content {
-                display: flex;
-                align-items: center;
-                gap: 15px;
-            }
-            
-            .message-icon {
-                font-size: 2rem;
-                color: #00ff41;
-            }
-            
-            .error-message .message-icon {
-                color: #ff4040;
-            }
-            
-            .message-text h3 {
-                margin: 0 0 5px 0;
-                color: #00ff41;
-                font-size: 1.1rem;
-            }
-            
-            .error-message .message-text h3 {
-                color: #ff4040;
-            }
-            
-            .message-text p {
-                margin: 0;
-                color: #e0e0e0;
-                font-size: 0.9rem;
-                line-height: 1.4;
-            }
-            
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    function addErrorMessageStyles() {
-        addSuccessMessageStyles(); // Uses same styles
-    }
+    // Message functions now available globally
     
     // ===== Conversion Tracking =====
     function trackConversion(event, userEmail) {
@@ -1109,6 +1298,31 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('AI Cash-Revolution landing page initialized');
 });
 
+// ===== Helper Functions =====
+
+// Email validation function
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+// Handle registration error responses
+function handleRegistrationError(response, result) {
+    let errorMessage = 'Errore durante la registrazione. Riprova.';
+    
+    if (response.status === 409) {
+        errorMessage = 'Questo indirizzo email è già registrato.';
+    } else if (response.status === 422) {
+        errorMessage = 'Dati non validi. Controlla i campi del modulo.';
+    } else if (response.status === 500) {
+        errorMessage = 'Servizio temporaneamente non disponibile. Ti preghiamo di riprovare tra qualche minuto.';
+    } else if (result && result.detail) {
+        errorMessage = result.detail;
+    }
+    
+    showErrorMessage(errorMessage);
+}
+
 // ===== Utility Functions =====
 const utils = {
     debounce: function(func, wait) {
@@ -1265,6 +1479,9 @@ if (MobileUtils.isMobile()) {
 window.AILandingPage = {
     utils,
     MobileUtils,
+    // Error/Success message functions
+    showSuccessMessage,
+    showErrorMessage,
     trackConversion: function(event, userEmail) {
         // Public method for tracking conversions
         trackConversion(event, userEmail);
