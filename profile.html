@@ -451,16 +451,37 @@
         
         function checkAuthentication() {
             const token = localStorage.getItem('access_token');
+            console.log('Checking authentication, token:', token ? 'Present' : 'Missing');
+            
             if (!token) {
-                // Redirect to homepage if not authenticated
-                window.location.href = 'index.html';
-                return;
+                console.log('No access token found, showing login message');
+                showNoAuthMessage();
+                return false;
             }
+            return true;
+        }
+        
+        function showNoAuthMessage() {
+            // Instead of redirecting, show a message
+            const profileName = document.getElementById('profileName');
+            const profileTier = document.getElementById('profileTier');
+            
+            profileName.textContent = 'Not Logged In';
+            profileTier.textContent = 'Please log in to view your profile';
+            
+            document.getElementById('usernameInput').value = 'Please log in first';
+            document.getElementById('emailInput').value = 'Please log in first';
+            
+            // Show a message box
+            showErrorMessage('Please log in to access your profile data');
         }
         
         async function loadUserProfile() {
             const token = localStorage.getItem('access_token');
-            if (!token) return;
+            if (!token) {
+                console.log('No token available for profile loading');
+                return;
+            }
             
             try {
                 console.log('Loading user profile...');
