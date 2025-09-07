@@ -49,8 +49,8 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # MT5 Bridge Configuration
-MT5_BRIDGE_URL = os.getenv("MT5_BRIDGE_URL", "http://localhost:8000")
-MT5_BRIDGE_API_KEY = os.getenv("MT5_BRIDGE_API_KEY", "your-bridge-api-key-change-this")
+MT5_BRIDGE_URL = os.getenv("MT5_BRIDGE_URL", "http://ai.cash-revolution.com:8000")
+MT5_BRIDGE_API_KEY = os.getenv("MT5_BRIDGE_API_KEY", "1d2376ae63aedb38f4d13e1041fb5f0b56cc48c44a8f106194d2da23e4039736")
 
 # Global MT5 connection status
 mt5_connection_active = False
@@ -578,6 +578,44 @@ async def get_live_quotes(
     symbol_list = None
     if symbols:
         symbol_list = [s.strip().upper() for s in symbols.split(",")]
+
+    # Check MT5 Bridge connection
+    bridge_connected = await connect_to_mt5_bridge()
+    mt5_connection_active = bridge_connected
+
+    if not bridge_connected:
+        return {
+            "status": "error",
+            "message": "MT5 Bridge non disponibile",
+            "bridge_url": MT5_BRIDGE_URL,
+            "quotes": {}
+        }
+
+    # Get live quotes
+    quotes = await get_mt5_quotes(symbol_list)
+    last_quotes_update = datetime.utcnow()
+
+    return {
+        "status": "success",
+        "message": "Quotazioni aggiornate",
+        "bridge_connected": True,
+        "last_update": last_quotes_update,
+        "quotes": quotes
+    }
+
+@app.get("/api/mt5/quotes-public")
+async def get_public_live_quotes(symbols: Optional[str] = None):
+    """Get live MT5 quotes for specified symbols - Public endpoint for dashboard"""
+    global mt5_connection_active, last_quotes_update
+
+    # Parse symbols parameter
+    symbol_list = None
+    if symbols:
+        symbol_list = [s.strip().upper() for s in symbols.split(",")]
+    
+    # Default symbols if none provided
+    if not symbol_list:
+        symbol_list = ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD"]
 
     # Check MT5 Bridge connection
     bridge_connected = await connect_to_mt5_bridge()
