@@ -1,35 +1,62 @@
 // ===== Main JavaScript for AI Cash-Revolution Landing Page =====
 
-// API Integration for Trial Signup
+// API Integration for Trial Signup - Use correct endpoint and payload
 async function submitTrialForm(formData) {
     try {
-        const response = await fetch(CONFIG.API_BASE_URL + '/register', {
+        // Use the correct trial signup endpoint with proper payload format
+        const trialData = {
+            fullName: formData.get('fullName'),
+            email: formData.get('email'),
+            phone: formData.get('phone') || '',
+            experience: formData.get('experience') || 'beginner'
+        };
+        
+        console.log('Submitting trial form with correct data:', {
+            fullName: trialData.fullName,
+            email: trialData.email,
+            phone: trialData.phone,
+            experience: trialData.experience
+        });
+        
+        const response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({
-                username: formData.get('fullName').toLowerCase().replace(/\s+/g, ''),
-                email: formData.get('email'),
-                password: 'temp_' + Math.random().toString(36).substr(2, 9), // Temporary password
-                full_name: formData.get('fullName'),
-                phone: formData.get('phone'),
-                trading_experience: formData.get('experience')
-            })
+            body: JSON.stringify(trialData)
         });
         
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.detail || 'Registration failed');
+        if (response.ok) {
+            // Trial signup was successful (201 Created)
+            return {
+                success: true,
+                message: 'Registrazione completata! Controlla la tua email per le credenziali.'
+            };
+        } else {
+            // Handle error response
+            const data = await response.json().catch(() => ({ detail: 'Unknown error' }));
+            console.error('Trial form submission failed:', {
+                status: response.status,
+                statusText: response.statusText,
+                data: data
+            });
+            
+            let errorMessage = 'Errore durante la registrazione. Riprova.';
+            if (response.status === 422) {
+                errorMessage = 'Dati non validi. Controlla i campi del modulo.';
+            } else if (response.status === 500) {
+                errorMessage = 'Servizio temporaneamente non disponibile. Il backend sta risolvendo alcuni problemi tecnici. Ti preghiamo di riprovare tra qualche minuto.';
+            } else if (data && data.detail) {
+                if (data.detail.includes('Internal server error')) {
+                    errorMessage = 'Errore interno del server. Il team tecnico è stato notificato. Riprova tra qualche minuto.';
+                } else {
+                    errorMessage = data.detail;
+                }
+            }
+            
+            throw new Error(errorMessage);
         }
-        
-        return {
-            success: true,
-            message: 'Registrazione completata! Controlla la tua email per le credenziali.',
-            data: data
-        };
         
     } catch (error) {
         console.error('Registration error:', error);
@@ -187,7 +214,7 @@ function createAuthModals() {
                         </div>
                         <div class="form-group">
                             <label for="regExperience">Esperienza di Trading</label>
-                            <select id="regExperience" name="experience" required>
+                            <select id="regExperience" name="experience">
                                 <option value="">Seleziona il tuo livello</option>
                                 <option value="beginner">Principiante (0-1 anni)</option>
                                 <option value="intermediate">Intermedio (1-5 anni)</option>
@@ -357,69 +384,40 @@ async function handleRegister(e) {
         const phone = formData.get('phone')?.trim();
         const experience = formData.get('experience');
         
-        if (!fullName || !email || !phone || !experience) {
-            throw new Error('Tutti i campi sono obbligatori');
+        if (!fullName || !email || !phone) {
+            throw new Error('Nome, email e telefono sono obbligatori');
         }
         
         if (!validateEmail(email)) {
             throw new Error('Inserisci un indirizzo email valido');
         }
         
-        // Try trial signup endpoint first (as per API schema)
-        let response, result;
-        
-        try {
-            console.log('Attempting trial signup...');
-            response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Origin': window.location.origin
-                },
-                body: JSON.stringify({
-                    fullName: fullName,
-                    email: email,
-                    phone: phone,
-                    experience: experience
-                })
-            });
-            
-            result = await response.json();
-            
-            if (response.ok) {
-                showSuccessMessage('Registrazione completata! Controlla la tua email per le credenziali di accesso.');
-                hideAuthModal('registerModal');
-                form.reset();
-                trackConversion('registration', email);
-                return;
-            }
-        } catch (trialError) {
-            console.log('Trial signup failed, trying main register endpoint:', trialError);
-        }
-        
-        // Fallback to main register endpoint
-        console.log('Attempting main registration...');
-        const data = {
-            username: fullName.toLowerCase().replace(/\s+/g, ''),
+        // Use correct trial signup endpoint with proper payload format
+        console.log('Attempting trial registration...');
+        const trialData = {
+            fullName: fullName,
             email: email,
-            password: 'temp_' + Math.random().toString(36).substr(2, 9),
-            full_name: fullName,
             phone: phone,
-            trading_experience: experience
+            experience: experience || 'beginner'
         };
         
-        response = await fetch(CONFIG.API_BASE_URL + '/register', {
+        console.log('Sending trial registration data:', {
+            fullName: trialData.fullName,
+            email: trialData.email,
+            phone: trialData.phone,
+            experience: trialData.experience
+        });
+        
+        const response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Origin': window.location.origin
+                'Accept': 'application/json'
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify(trialData)
         });
         
-        result = await response.json();
+        const result = await response.json();
         
         if (response.ok) {
             showSuccessMessage('Registrazione completata! Controlla la tua email per le credenziali.');
@@ -427,6 +425,13 @@ async function handleRegister(e) {
             form.reset();
             trackConversion('registration', email);
         } else {
+            // Log the full response for debugging
+            console.error('Registration failed:', {
+                status: response.status,
+                statusText: response.statusText,
+                result: result
+            });
+            
             // Handle specific error cases
             let errorMessage = 'Errore durante la registrazione. Riprova.';
             
@@ -435,9 +440,13 @@ async function handleRegister(e) {
             } else if (response.status === 422) {
                 errorMessage = 'Dati non validi. Controlla i campi del modulo.';
             } else if (response.status === 500) {
-                errorMessage = 'Servizio temporaneamente non disponibile. Ti preghiamo di riprovare tra qualche minuto o contattare il supporto.';
-            } else if (result.detail) {
-                errorMessage = result.detail;
+                errorMessage = 'Servizio temporaneamente non disponibile. Il backend sta risolvendo alcuni problemi tecnici. Ti preghiamo di riprovare tra qualche minuto.';
+            } else if (result && result.detail) {
+                if (result.detail.includes('Internal server error')) {
+                    errorMessage = 'Errore interno del server. Il team tecnico è stato notificato. Riprova tra qualche minuto.';
+                } else {
+                    errorMessage = result.detail;
+                }
             }
             
             throw new Error(errorMessage);
@@ -859,8 +868,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const phone = formData.get('phone')?.trim();
         const experience = formData.get('experience');
         
-        if (!fullName || !email || !phone || !experience) {
-            showErrorMessage('Tutti i campi sono obbligatori');
+        if (!fullName || !email || !phone) {
+            showErrorMessage('Nome, email e telefono sono obbligatori');
             resetButtonState();
             return;
         }
@@ -872,67 +881,55 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         try {
-            // Try trial signup endpoint first (more appropriate for landing page form)
-            let response, result;
-            
+            // Use correct trial signup approach with proper endpoint and payload
             console.log('Attempting trial signup from landing page...');
-            response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
+            const trialData = {
+                fullName: fullName,
+                email: email,
+                phone: phone,
+                experience: experience || 'beginner'
+            };
+            
+            console.log('Sending trial signup data:', {
+                fullName: trialData.fullName,
+                email: trialData.email,
+                phone: trialData.phone,
+                experience: trialData.experience
+            });
+            
+            const response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Origin': window.location.origin
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({
-                    fullName: fullName,
-                    email: email,
-                    phone: phone,
-                    experience: experience
-                })
+                body: JSON.stringify(trialData)
             });
             
-            result = await response.json();
+            const result = await response.json();
             
             if (response.ok) {
-                showSuccessMessage('Registrazione completata! Controlla la tua email per le credenziali di accesso.');
+                showSuccessMessage('Registrazione completata! Controlla la tua email per le credenziali.');
                 signupForm.reset();
                 trackConversion('trial_signup', email);
             } else {
-                // If trial signup fails, try full registration as fallback
-                console.log('Trial signup failed, attempting full registration...');
-                
-                const registrationData = {
-                    username: fullName.toLowerCase().replace(/\s+/g, ''),
-                    email: email,
-                    password: 'temp_' + Math.random().toString(36).substr(2, 9),
-                    full_name: fullName,
-                    phone: phone,
-                    trading_experience: experience
-                };
-                
-                response = await fetch(CONFIG.API_BASE_URL + '/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'Origin': window.location.origin
-                    },
-                    body: JSON.stringify(registrationData)
+                // Log the full response for debugging
+                console.error('Registration failed:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    result: result
                 });
                 
-                result = await response.json();
-                
-                if (response.ok) {
-                    showSuccessMessage('Registrazione completata! Controlla la tua email per le credenziali.');
-                    signupForm.reset();
-                    trackConversion('trial_signup', email);
-                } else {
-                    handleRegistrationError(response, result);
-                }
+                handleRegistrationError(response, result);
             }
             
         } catch (error) {
             console.error('Form submission error:', error);
+            console.error('Full error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
             showErrorMessage('Errore durante la registrazione. Verifica la connessione internet e riprova.');
         } finally {
             resetButtonState();
@@ -1315,9 +1312,13 @@ function handleRegistrationError(response, result) {
     } else if (response.status === 422) {
         errorMessage = 'Dati non validi. Controlla i campi del modulo.';
     } else if (response.status === 500) {
-        errorMessage = 'Servizio temporaneamente non disponibile. Ti preghiamo di riprovare tra qualche minuto.';
+        errorMessage = 'Servizio temporaneamente non disponibile. Il backend sta risolvendo alcuni problemi tecnici. Ti preghiamo di riprovare tra qualche minuto.';
     } else if (result && result.detail) {
-        errorMessage = result.detail;
+        if (result.detail.includes('Internal server error')) {
+            errorMessage = 'Errore interno del server. Il team tecnico è stato notificato. Riprova tra qualche minuto.';
+        } else {
+            errorMessage = result.detail;
+        }
     }
     
     showErrorMessage(errorMessage);
