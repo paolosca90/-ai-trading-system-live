@@ -2484,3 +2484,319 @@ h1, h2, h3, h4, h5, h6 {
         grid-template-columns: repeat(3, 1fr);
     }
 }
+
+/* ===== Authentication Dropdown & Modal Styles ===== */
+
+/* Auth Dropdown */
+.auth-dropdown {
+    position: relative;
+    margin-left: 20px;
+}
+
+.auth-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(0, 255, 65, 0.1);
+    border: 1px solid #00ff41;
+    border-radius: 6px;
+    color: #00ff41;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    font-family: 'Orbitron', monospace;
+}
+
+.auth-dropdown-btn:hover {
+    background: rgba(0, 255, 65, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+}
+
+.auth-dropdown-btn .dropdown-arrow {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.auth-dropdown.show .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.auth-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    min-width: 160px;
+    background: rgba(0, 0, 0, 0.95);
+    border: 1px solid #00ff41;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 255, 65, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.auth-dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.auth-option {
+    padding: 12px 16px;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+}
+
+.auth-option:last-child {
+    border-bottom: none;
+}
+
+.auth-option:hover {
+    background: rgba(0, 255, 65, 0.1);
+    color: #00ff41;
+}
+
+/* Auth Modals */
+.auth-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.auth-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content {
+    background: rgba(0, 0, 0, 0.95);
+    border: 2px solid #00ff41;
+    border-radius: 15px;
+    max-width: 450px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 255, 65, 0.3);
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.auth-modal.show .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+}
+
+.modal-header h3 {
+    color: #00ff41;
+    font-family: 'Orbitron', monospace;
+    font-size: 1.3rem;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 5px;
+    line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.modal-close:hover {
+    color: #ff4040;
+}
+
+.auth-form {
+    padding: 25px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #00ff41;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px 15px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    font-family: 'Source Code Pro', monospace;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #00ff41;
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+.form-checkbox {
+    margin: 20px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.form-checkbox input[type="checkbox"] {
+    width: auto;
+    margin-top: 2px;
+    accent-color: #00ff41;
+}
+
+.form-checkbox label {
+    color: #ccc;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.form-checkbox label a {
+    color: #00ff41;
+    text-decoration: none;
+}
+
+.form-checkbox label a:hover {
+    text-decoration: underline;
+}
+
+.auth-submit-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(45deg, #00ff41, #00cc33);
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Orbitron', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+    box-shadow: 0 0 20px rgba(0, 255, 65, 0.4);
+    transform: translateY(-2px);
+}
+
+.auth-submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.auth-switch {
+    text-align: center;
+    padding: 20px 0 0 0;
+    border-top: 1px solid rgba(0, 255, 65, 0.2);
+    margin-top: 20px;
+}
+
+.auth-switch p {
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+.auth-switch a {
+    color: #00ff41;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-switch a:hover {
+    text-decoration: underline;
+}
+
+/* Prevent scroll when modal is open */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* Mobile optimizations for auth */
+@media (max-width: 768px) {
+    .auth-dropdown {
+        margin-left: 10px;
+    }
+    
+    .auth-dropdown-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+    
+    .modal-content {
+        margin: 10px;
+        max-height: calc(100vh - 20px);
+    }
+    
+    .modal-header {
+        padding: 15px 20px;
+    }
+    
+    .auth-form {
+        padding: 20px;
+    }
+    
+    .form-group input,
+    .form-group select {
+        padding: 10px 12px;
+    }
+    
+    .auth-submit-btn {
+        padding: 12px;
+        font-size: 0.9rem;
+    }
+}

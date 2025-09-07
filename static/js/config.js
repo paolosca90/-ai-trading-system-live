@@ -1,7 +1,7 @@
 // Configuration for AI Cash-Revolution Frontend
 const CONFIG = {
-    // Railway Backend URL - Connected to custom domain
-    API_BASE_URL: 'https://cash-revolution.com', // ✅ Connected to your custom domain
+    // Railway Backend URL - Using direct Railway URL
+    API_BASE_URL: 'https://web-production-51f67.up.railway.app', // ✅ Connected to Railway backend
     
     // API Endpoints
     ENDPOINTS: {

@@ -40,8 +40,20 @@
                 <a href="#features" class="nav-link" data-translate="nav.features">Caratteristiche</a>
                 <a href="#proof" class="nav-link" data-translate="nav.proof">Prova</a>
                 <a href="#pricing" class="nav-link" data-translate="nav.pricing">Prezzi</a>
-                <a href="#contact" class="nav-link" data-translate="nav.contact">Contatti</a>
-                <a href="#trial" class="cta-button nav-cta" data-translate="nav.trial">Prova Gratuita</a>
+                <div class="auth-dropdown">
+                    <button class="auth-dropdown-btn" id="authDropdownBtn">
+                        <span data-translate="nav.account">Account</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div class="auth-dropdown-menu" id="authDropdownMenu">
+                        <div class="auth-option" data-action="login">
+                            <span data-translate="nav.login">Accedi</span>
+                        </div>
+                        <div class="auth-option" data-action="register">
+                            <span data-translate="nav.register">Registrati</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="language-selector">
                     <div class="language-dropdown">
                         <button class="language-btn" id="languageBtn">
