@@ -522,8 +522,7 @@
                         displayRealSignals(data.signals);
                         console.log(`Loaded ${data.signals.length} real signals`);
                     } else {
-                        console.log('No real signals found - clearing display');
-                        showNoSignalsMessage();
+                        console.log('No signals found, keeping demo signals');
                     }
                 } else {
                     console.error('Failed to load signals:', response.status);
@@ -568,9 +567,9 @@
                 signalsList.insertAdjacentHTML('beforeend', signalHtml);
             });
             
-            // Only show real signals - no artificial padding
-            if (signals.length === 0) {
-                showNoSignalsMessage();
+            // If we have less than 3 signals, keep some demo ones
+            if (signals.length < 3) {
+                console.log('Adding demo signals to fill the list');
             }
         }
         
@@ -667,35 +666,6 @@
         
         function addToWatchlist(asset) {
             showToast(`${asset} added to watchlist`);
-        }
-        
-        function showNoSignalsMessage() {
-            const signalsList = document.getElementById('signalsList');
-            signalsList.innerHTML = `
-                <div class="no-signals-message" style="
-                    text-align: center;
-                    padding: 40px 20px;
-                    color: #00ff41;
-                    border: 1px solid #00ff41;
-                    border-radius: 8px;
-                    background: rgba(0, 255, 65, 0.05);
-                    margin: 20px 0;
-                ">
-                    <h3 style="margin-bottom: 15px;">No Active Signals</h3>
-                    <p style="margin-bottom: 20px;">Currently analyzing market conditions from MT5 real-time data.</p>
-                    <p style="font-size: 14px; opacity: 0.8;">New signals will appear when market conditions meet our AI criteria.</p>
-                    <button onclick="generateSignalsIfNeeded()" style="
-                        background: #00ff41;
-                        color: #000;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 5px;
-                        margin-top: 15px;
-                        cursor: pointer;
-                        font-weight: bold;
-                    ">Check for New Signals</button>
-                </div>
-            `;
         }
         
         function showToast(message) {
