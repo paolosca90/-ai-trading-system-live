@@ -439,10 +439,11 @@ def get_current_user_info(current_user: User = Depends(get_current_active_user),
 
 @app.get("/signals/top", response_model=TopSignalsResponse)
 def get_top_signals(db: Session = Depends(get_db)):
-    """Get top 3 public signals with highest reliability (regardless of threshold)"""
+    """Get top public signals with highest reliability"""
     top_signals = db.query(Signal).filter(
-        Signal.is_public == True
-    ).order_by(Signal.reliability.desc()).limit(3).all()  # Always show top 3
+        Signal.is_public == True,
+        Signal.reliability >= 60.0  # Lower threshold to show more signals
+    ).order_by(Signal.reliability.desc()).limit(5).all()  # Show up to 5 signals
 
     return TopSignalsResponse(
         signals=top_signals,
@@ -471,37 +472,6 @@ def debug_signals(db: Session = Depends(get_db)):
     return {
         "total_signals": len(all_signals),
         "signals": signals_data,
-        "timestamp": datetime.utcnow().isoformat()
-    }
-
-@app.get("/api/ml/signals")
-def get_ml_signals(db: Session = Depends(get_db)):
-    """Get signals with reliability >= 70% for machine learning training"""
-    ml_signals = db.query(Signal).filter(
-        Signal.is_public == True,
-        Signal.use_for_ml == True,
-        Signal.reliability >= 70.0
-    ).order_by(Signal.created_at.desc()).limit(50).all()
-    
-    ml_data = []
-    for signal in ml_signals:
-        ml_data.append({
-            "id": signal.id,
-            "asset": signal.asset,
-            "signal_type": signal.signal_type,
-            "entry_price": signal.entry_price,
-            "stop_loss": signal.stop_loss,
-            "take_profit": signal.take_profit,
-            "reliability": signal.reliability,
-            "outcome": signal.outcome,
-            "profit_loss": signal.profit_loss,
-            "created_at": signal.created_at.isoformat() if signal.created_at else None
-        })
-    
-    return {
-        "ml_signals_count": len(ml_signals),
-        "signals": ml_data,
-        "criteria": "reliability >= 70%, use_for_ml = true",
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -1045,86 +1015,12 @@ async def generate_signals_manually(
             "signals": 0
         }
 
-async def generate_quick_signals(db: Session) -> List[Dict]:
-    """Generate simple demo signals using MT5 data"""
-    signals = []
-    symbols = ["EURUSD", "GBPUSD", "USDJPY", "XAUUSD", "US500"]
-    
-    try:
-        # Get quotes from MT5
-        quotes_data = await get_mt5_quotes(symbols[:3])  # Get 3 symbols
-        
-        for symbol, quote_data in quotes_data.items():
-            if len(signals) >= 3:
-                break
-                
-            current_price = quote_data.get('bid', quote_data.get('close', 1.0))
-            
-            # Simple signal generation based on price patterns
-            import random
-            signal_type = random.choice(["BUY", "SELL"])
-            confidence = round(random.uniform(65, 95), 1)
-            
-            # Calculate SL/TP based on price
-            if signal_type == "BUY":
-                sl = current_price * 0.998  # 0.2% stop loss
-                tp = current_price * 1.004  # 0.4% take profit
-            else:
-                sl = current_price * 1.002
-                tp = current_price * 0.996
-            
-            signal = {
-                "symbol": symbol,
-                "signal_type": signal_type,
-                "entry_price": current_price,
-                "stop_loss": sl,
-                "take_profit": tp,
-                "confidence": confidence,
-                "explanation": f"AI analysis indicates {signal_type.lower()} opportunity based on current market conditions."
-            }
-            
-            signals.append(signal)
-            
-    except Exception as e:
-        print(f"Error generating signals: {e}")
-        # Fallback demo signals if MT5 fails
-        demo_signals = [
-            {
-                "symbol": "EURUSD",
-                "signal_type": "BUY",
-                "entry_price": 1.1750,
-                "stop_loss": 1.1720,
-                "take_profit": 1.1800,
-                "confidence": 78.5,
-                "explanation": "Demo signal: Bullish momentum detected with strong support levels."
-            },
-            {
-                "symbol": "GBPUSD", 
-                "signal_type": "SELL",
-                "entry_price": 1.3500,
-                "stop_loss": 1.3530,
-                "take_profit": 1.3450,
-                "confidence": 72.3,
-                "explanation": "Demo signal: Bearish trend continuation expected."
-            },
-            {
-                "symbol": "USDJPY",
-                "signal_type": "BUY", 
-                "entry_price": 147.50,
-                "stop_loss": 147.20,
-                "take_profit": 148.00,
-                "confidence": 85.2,
-                "explanation": "Demo signal: Strong upward momentum with favorable risk/reward."
-            }
-        ]
-        signals = demo_signals[:3]
-    
-    return signals
-
 @app.post("/api/generate-signals-auto")
 async def auto_generate_signals(db: Session = Depends(get_db)):
-    """Auto-generate signals - Simplified version that works on Railway"""
+    """Auto-generate signals - Public endpoint for demo (normally would be scheduled)"""
     try:
+        from ai_signal_engine import SignalEngine
+        
         # Check if we already have recent signals (within last 2 hours)
         recent_signals = db.query(Signal).filter(
             Signal.created_at > datetime.utcnow() - timedelta(hours=2),
@@ -1138,50 +1034,24 @@ async def auto_generate_signals(db: Session = Depends(get_db)):
                 "recent_count": recent_signals
             }
         
-        # Generate new signals using simplified method
-        signals = await generate_quick_signals(db)
+        engine = SignalEngine()
+        
+        # Generate new signals
+        signals = await engine.generate_signals(max_signals=3)
         
         if signals:
-            # Save to database
-            signals_created = 0
-            for signal_data in signals:
-                try:
-                    new_signal = Signal(
-                        user_id=None,  # Public signals
-                        asset=signal_data["symbol"],
-                        signal_type=signal_data["signal_type"],
-                        entry_price=signal_data["entry_price"],
-                        stop_loss=signal_data["stop_loss"],
-                        take_profit=signal_data["take_profit"],
-                        reliability=signal_data["confidence"],
-                        is_public=True,
-                        current_price=signal_data["entry_price"],
-                        gemini_explanation=signal_data["explanation"],
-                        expires_at=datetime.utcnow() + timedelta(hours=4),
-                        is_active=True,
-                        outcome="PENDING",
-                        use_for_ml=(signal_data["confidence"] >= 70.0)  # ML flag for high confidence signals
-                    )
-                    
-                    db.add(new_signal)
-                    signals_created += 1
-                except Exception as e:
-                    print(f"Error creating signal: {e}")
-                    continue
-            
-            if signals_created > 0:
-                db.commit()
-                print(f"Successfully saved {signals_created} signals")
+            # Save to database  
+            engine.save_signals_to_db(signals)
             
             return {
-                "message": f"Auto-generated {signals_created} new signals",
+                "message": f"Auto-generated {len(signals)} new signals",
                 "status": "success",
-                "signals_generated": signals_created,
+                "signals_generated": len(signals),
                 "timestamp": datetime.utcnow().isoformat()
             }
         else:
             return {
-                "message": "No signals could be generated",
+                "message": "No signal conditions met in current market",
                 "status": "no_signals",
                 "signals_generated": 0
             }
