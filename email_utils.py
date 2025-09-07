@@ -14,10 +14,10 @@ def send_registration_email(to_email, username):
     smtp_username = '967997001@smtp-brevo.com'
     
     # Password SMTP da variabile d'ambiente o hardcoded per test
-    smtp_password = os.getenv('BREVO_SMTP_PASSWORD', 'QUI_METTI_LA_TUA_PASSWORD_SMTP')
+    smtp_password = os.getenv('BREVO_SMTP_PASSWORD', 'b8QxjJG4HUzw7DsA')
     
     # Email mittente personalizzata (deve essere verificata su Brevo)
-    from_email = os.getenv('FROM_EMAIL', 'info@tuodominio.com')  # Sostituisci con la tua email
+    from_email = os.getenv('FROM_EMAIL', 'support@cash-revolution.com')  # Sostituisci con la tua email
     
     # Calcola data scadenza trial
     trial_end_date = (datetime.now() + timedelta(days=7)).strftime('%d/%m/%Y')
