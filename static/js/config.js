@@ -14,9 +14,6 @@ const CONFIG = {
         topSignals: '/signals/top',
         userSignals: '/signals',
         
-        // Trial signup
-        trialSignup: '/api/trial-signup',
-        
         // MT5 Integration
         mt5Connect: '/mt5/connect',
         mt5Status: '/mt5/status'

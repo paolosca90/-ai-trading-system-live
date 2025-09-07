@@ -1,30 +1,33 @@
 // ===== Main JavaScript for AI Cash-Revolution Landing Page =====
 
-// API Integration for Trial Signup - Use correct endpoint and payload
+// API Integration for User Registration - Use correct endpoint and payload
 async function submitTrialForm(formData) {
     try {
-        // Use the correct trial signup endpoint with proper payload format
-        const trialData = {
-            fullName: formData.get('fullName'),
+        // Use the correct registration endpoint with proper payload format
+        const registrationData = {
+            username: formData.get('username'),
             email: formData.get('email'),
-            phone: formData.get('phone') || '',
-            experience: formData.get('experience') || 'beginner'
+            password: formData.get('password'),
+            full_name: formData.get('fullName') || null,
+            phone: formData.get('phone') || null,
+            trading_experience: formData.get('experience') || null
         };
         
-        console.log('Submitting trial form with correct data:', {
-            fullName: trialData.fullName,
-            email: trialData.email,
-            phone: trialData.phone,
-            experience: trialData.experience
+        console.log('Submitting registration form with correct data:', {
+            username: registrationData.username,
+            email: registrationData.email,
+            full_name: registrationData.full_name,
+            phone: registrationData.phone,
+            trading_experience: registrationData.trading_experience
         });
         
-        const response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
+        const response = await fetch(CONFIG.API_BASE_URL + '/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify(trialData)
+            body: JSON.stringify(registrationData)
         });
         
         if (response.ok) {
@@ -202,15 +205,23 @@ function createAuthModals() {
                     <form id="registerForm" class="auth-form">
                         <div class="form-group">
                             <label for="regFullName">Nome Completo</label>
-                            <input type="text" id="regFullName" name="fullName" required>
+                            <input type="text" id="regFullName" name="fullName">
+                        </div>
+                        <div class="form-group">
+                            <label for="regUsername">Username</label>
+                            <input type="text" id="regUsername" name="username" required>
                         </div>
                         <div class="form-group">
                             <label for="regEmail">Email</label>
                             <input type="email" id="regEmail" name="email" required>
                         </div>
                         <div class="form-group">
+                            <label for="regPassword">Password</label>
+                            <input type="password" id="regPassword" name="password" required minlength="6">
+                        </div>
+                        <div class="form-group">
                             <label for="regPhone">Telefono</label>
-                            <input type="tel" id="regPhone" name="phone" required>
+                            <input type="tel" id="regPhone" name="phone">
                         </div>
                         <div class="form-group">
                             <label for="regExperience">Esperienza di Trading</label>
@@ -379,42 +390,51 @@ async function handleRegister(e) {
         const formData = new FormData(form);
         
         // Validate form data
+        const username = formData.get('username')?.trim();
         const fullName = formData.get('fullName')?.trim();
         const email = formData.get('email')?.trim();
+        const password = formData.get('password')?.trim();
         const phone = formData.get('phone')?.trim();
         const experience = formData.get('experience');
         
-        if (!fullName || !email || !phone) {
-            throw new Error('Nome, email e telefono sono obbligatori');
+        if (!username || !email || !password) {
+            throw new Error('Username, email e password sono obbligatori');
         }
         
         if (!validateEmail(email)) {
             throw new Error('Inserisci un indirizzo email valido');
         }
         
-        // Use correct trial signup endpoint with proper payload format
-        console.log('Attempting trial registration...');
-        const trialData = {
-            fullName: fullName,
+        if (password.length < 6) {
+            throw new Error('La password deve essere di almeno 6 caratteri');
+        }
+        
+        // Use correct registration endpoint with proper payload format
+        console.log('Attempting user registration...');
+        const registrationData = {
+            username: username,
             email: email,
-            phone: phone,
-            experience: experience || 'beginner'
+            password: password,
+            full_name: fullName || null,
+            phone: phone || null,
+            trading_experience: experience || null
         };
         
-        console.log('Sending trial registration data:', {
-            fullName: trialData.fullName,
-            email: trialData.email,
-            phone: trialData.phone,
-            experience: trialData.experience
+        console.log('Sending registration data:', {
+            username: registrationData.username,
+            email: registrationData.email,
+            full_name: registrationData.full_name,
+            phone: registrationData.phone,
+            trading_experience: registrationData.trading_experience
         });
         
-        const response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
+        const response = await fetch(CONFIG.API_BASE_URL + '/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify(trialData)
+            body: JSON.stringify(registrationData)
         });
         
         const result = await response.json();
@@ -863,13 +883,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(signupForm);
         
         // Validate form data
+        const username = formData.get('username')?.trim();
         const fullName = formData.get('fullName')?.trim();
         const email = formData.get('email')?.trim();
+        const password = formData.get('password')?.trim();
         const phone = formData.get('phone')?.trim();
         const experience = formData.get('experience');
         
-        if (!fullName || !email || !phone) {
-            showErrorMessage('Nome, email e telefono sono obbligatori');
+        if (!username || !email || !password) {
+            showErrorMessage('Username, email e password sono obbligatori');
             resetButtonState();
             return;
         }
@@ -880,30 +902,39 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        if (password.length < 6) {
+            showErrorMessage('La password deve essere di almeno 6 caratteri');
+            resetButtonState();
+            return;
+        }
+        
         try {
-            // Use correct trial signup approach with proper endpoint and payload
-            console.log('Attempting trial signup from landing page...');
-            const trialData = {
-                fullName: fullName,
+            // Use correct registration endpoint with proper payload format
+            console.log('Attempting user registration from trial form...');
+            const registrationData = {
+                username: username,
                 email: email,
-                phone: phone,
-                experience: experience || 'beginner'
+                password: password,
+                full_name: fullName || null,
+                phone: phone || null,
+                trading_experience: experience || null
             };
             
-            console.log('Sending trial signup data:', {
-                fullName: trialData.fullName,
-                email: trialData.email,
-                phone: trialData.phone,
-                experience: trialData.experience
+            console.log('Sending registration data:', {
+                username: registrationData.username,
+                email: registrationData.email,
+                full_name: registrationData.full_name,
+                phone: registrationData.phone,
+                trading_experience: registrationData.trading_experience
             });
             
-            const response = await fetch(CONFIG.API_BASE_URL + '/api/trial-signup', {
+            const response = await fetch(CONFIG.API_BASE_URL + '/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify(trialData)
+                body: JSON.stringify(registrationData)
             });
             
             const result = await response.json();
