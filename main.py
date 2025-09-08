@@ -246,8 +246,7 @@ def register_user(user: UserCreate, background_tasks: BackgroundTasks, db: Sessi
         trial_end = datetime.utcnow() + timedelta(days=7)  # 7-day trial
         subscription = Subscription(
             user_id=db_user.id,
-            status="TRIAL",
-            plan_name="trial",
+            plan_name="TRIAL",
             end_date=trial_end
         )
         db.add(subscription)
@@ -256,9 +255,9 @@ def register_user(user: UserCreate, background_tasks: BackgroundTasks, db: Sessi
 
         print(f"Utente creato con ID: {db_user.id}")
 
-        # INVIO EMAIL IN BACKGROUND! (TEMPORANEAMENTE DISABILITATO)
-        # background_tasks.add_task(send_registration_email, db_user.email, db_user.username)
-        print(f"Email di benvenuto programmata per {db_user.email} (DISABILITATA)")
+        # INVIO EMAIL IN BACKGROUND!
+        background_tasks.add_task(send_registration_email, db_user.email, db_user.username)
+        print(f"Email di benvenuto programmata per {db_user.email}")
 
         return UserResponse(
             message="Utente registrato con successo. Trial di 7 giorni attivato!",
@@ -1272,8 +1271,7 @@ def debug_register(user: UserCreate, db: Session = Depends(get_db)):
         trial_end = datetime.utcnow() + timedelta(days=7)
         subscription = Subscription(
             user_id=db_user.id,
-            status="TRIAL",
-            plan_name="trial",
+            plan_name="TRIAL",
             end_date=trial_end
         )
         db.add(subscription)
