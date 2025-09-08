@@ -33,8 +33,13 @@ class UserResponse(UserBase):
 class UserStatsOut(BaseModel):
     total_signals: int
     active_signals: int
-    total_executions: int
-    avg_reliability: float
+    winning_signals: int
+    losing_signals: int
+    win_rate: float
+    total_profit_loss: float
+    average_reliability: float
+    subscription_status: str
+    subscription_days_left: Optional[int] = None
 
 # Token schemas
 class Token(BaseModel):

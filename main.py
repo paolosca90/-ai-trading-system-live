@@ -39,13 +39,30 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS middleware
+# CORS middleware - Updated for better compatibility
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=[
+        "https://www.cash-revolution.com",
+        "https://cash-revolution.com", 
+        "https://web-production-51f67.up.railway.app",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "*"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Accept",
+        "Accept-Language",
+        "Content-Language",
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Origin",
+        "X-VPS-API-Key"
+    ],
+    expose_headers=["*"]
 )
 
 # Mount static files
@@ -214,6 +231,22 @@ def api_root():
         "status": "active",
         "endpoints": "/docs for API documentation"
     }
+
+# Explicit CORS preflight handler
+@app.options("/{path:path}")
+async def preflight_handler(request: Request, path: str):
+    """Handle CORS preflight requests"""
+    return {}
+
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    """Add CORS headers to all responses"""
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Accept, Accept-Language, Content-Language, Content-Type, Authorization, X-Requested-With, Origin, X-VPS-API-Key"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 # Health check
 @app.get("/health")

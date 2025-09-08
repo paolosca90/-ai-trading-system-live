@@ -466,8 +466,8 @@
             if (!token) return;
             
             try {
-                // Load live signals
-                const signalsResponse = await fetch(CONFIG.VPS_BASE_URL + '/signals/latest', {
+                // Load live signals from Railway API (HTTPS)
+                const signalsResponse = await fetch(CONFIG.API_BASE_URL + '/api/signals/latest', {
                     headers: {
                         'Accept': 'application/json'
                     }
