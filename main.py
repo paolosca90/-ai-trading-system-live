@@ -1243,6 +1243,53 @@ def reset_database_schema(
             detail=f"Database reset failed: {str(e)}"
         )
 
+# DEBUG ENDPOINT
+@app.post("/debug/register")
+def debug_register(user: UserCreate, db: Session = Depends(get_db)):
+    """Debug registration endpoint"""
+    try:
+        print(f"DEBUG: Starting registration for {user.username}")
+        
+        # Test 1: Hash password
+        hashed_password = hash_password(user.password)
+        print(f"DEBUG: Password hashed successfully")
+        
+        # Test 2: Create user object
+        db_user = User(
+            username=user.username,
+            email=user.email,
+            hashed_password=hashed_password,
+            full_name=user.full_name if hasattr(user, 'full_name') else None
+        )
+        print(f"DEBUG: User object created")
+        
+        # Test 3: Add to database
+        db.add(db_user)
+        db.flush()
+        print(f"DEBUG: User added to DB, ID: {db_user.id}")
+        
+        # Test 4: Create subscription
+        trial_end = datetime.utcnow() + timedelta(days=7)
+        subscription = Subscription(
+            user_id=db_user.id,
+            status="TRIAL",
+            plan_name="trial",
+            end_date=trial_end
+        )
+        db.add(subscription)
+        print(f"DEBUG: Subscription created")
+        
+        # Test 5: Commit
+        db.commit()
+        print(f"DEBUG: Database commit successful")
+        
+        return {"status": "success", "user_id": db_user.id, "message": "Debug registration successful"}
+        
+    except Exception as e:
+        db.rollback()
+        print(f"DEBUG ERROR: {str(e)}")
+        return {"status": "error", "error": str(e), "type": str(type(e).__name__)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
