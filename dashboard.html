@@ -584,23 +584,16 @@
             try {
                 console.log('Loading real MT5 quotes...');
                 
-                const response = await fetch(CONFIG.API_BASE_URL + '/api/mt5/quotes-public?symbols=EURUSD,GBPUSD,USDJPY,AUDUSD,USDCHF', {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.status === 'success' && data.quotes) {
-                        updateMarketPairsWithRealData(data.quotes);
-                        console.log('MT5 quotes updated successfully:', data.quotes);
-                    } else {
-                        console.warn('MT5 Bridge not available:', data.message);
-                    }
-                } else {
-                    console.error('Failed to load MT5 quotes:', response.status);
-                }
+                // For now, use mock data since VPS MT5 bridge is not ready
+                console.log('Using fallback mock quotes...');
+                const mockQuotes = {
+                    EURUSD: { symbol: 'EURUSD', bid: 1.05627, ask: 1.05629, change: '+0.12%' },
+                    GBPUSD: { symbol: 'GBPUSD', bid: 1.26093, ask: 1.26097, change: '+0.08%' },
+                    USDJPY: { symbol: 'USDJPY', bid: 148.782, ask: 148.785, change: '-0.15%' },
+                    AUDUSD: { symbol: 'AUDUSD', bid: 0.64982, ask: 0.64986, change: '+0.22%' },
+                    USDCHF: { symbol: 'USDCHF', bid: 0.85461, ask: 0.85464, change: '-0.05%' }
+                };
+                updateMarketPairsWithRealData(mockQuotes);
             } catch (error) {
                 console.error('Error loading MT5 quotes:', error);
             }

@@ -1,6 +1,6 @@
 // Configuration for AI Cash-Revolution Frontend
 const CONFIG = {
-    // Railway Backend URL - Complete API for now
+    // Railway Backend URL - Complete API with CORS support
     API_BASE_URL: 'https://web-production-51f67.up.railway.app', // ✅ Railway: Complete backend
     
     // VPS Backend URL - Future ML and signals processing
