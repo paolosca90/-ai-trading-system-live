@@ -11,12 +11,13 @@ import httpx
 import os
 
 # Import our modules
-from database import SessionLocal, engine
-from models import Base, User, Signal, Subscription, MT5Connection, SignalExecution
+from database import SessionLocal, engine, check_database_health
+from models import Base, User, Signal, Subscription, MT5Connection, SignalExecution, VPSHeartbeat
 from schemas import (
     UserCreate, UserResponse, Token, SignalCreate, SignalOut,
     SignalResponse, TopSignalsResponse, MT5ConnectionCreate, MT5ConnectionOut,
-    SignalExecutionCreate, SignalExecutionOut, SignalFilter, UserStatsOut
+    SignalExecutionCreate, SignalExecutionOut, SignalFilter, UserStatsOut,
+    VPSHeartbeatCreate, VPSSignalReceive, HealthCheckResponse, APIResponse
 )
 from jwt_auth import (
     authenticate_user, create_access_token, create_refresh_token,
@@ -53,6 +54,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # MT5 Bridge Configuration
 MT5_BRIDGE_URL = os.getenv("MT5_BRIDGE_URL", "http://ai.cash-revolution.com:8000")
 MT5_BRIDGE_API_KEY = os.getenv("MT5_BRIDGE_API_KEY", "1d2376ae63aedb38f4d13e1041fb5f0b56cc48c44a8f106194d2da23e4039736")
+
+# VPS API Key for authentication
+VPS_API_KEY = os.getenv("VPS_API_KEY", "1d2376ae63aedb38f4d13e1041fb5f0b56cc48c44a8f106194d2da23e4039736")
 
 # Global MT5 connection status
 mt5_connection_active = False
@@ -149,6 +153,16 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# VPS API Key verification
+def verify_vps_api_key(request: Request):
+    api_key = request.headers.get("X-VPS-API-Key")
+    if api_key != VPS_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid VPS API Key"
+        )
+    return True
 
 # Serve the landing page
 @app.get("/", response_class=HTMLResponse)
@@ -975,6 +989,210 @@ def generate_signals_if_needed_info(db: Session = Depends(get_db)):
         "total_active": active_count,
         "info": "Railway serves web interface - signals generated on VPS"
     }
+
+# ========== VPS API ENDPOINTS ==========
+
+@app.get("/health", response_model=HealthCheckResponse)
+def health_check(db: Session = Depends(get_db)):
+    """Health check endpoint for monitoring"""
+    try:
+        # Test database connection
+        db.execute("SELECT 1")
+        db_status = "connected"
+    except Exception:
+        db_status = "error"
+    
+    # Count recent VPS heartbeats (last 5 minutes)
+    recent_heartbeats = db.query(VPSHeartbeat).filter(
+        VPSHeartbeat.timestamp >= datetime.now() - timedelta(minutes=5)
+    ).count()
+    
+    vps_status = "operational" if recent_heartbeats > 0 else "no_vps_connection"
+    
+    return HealthCheckResponse(
+        status="healthy" if db_status == "connected" else "degraded",
+        timestamp=datetime.now(),
+        database=db_status,
+        services={
+            "api": "operational",
+            "database": db_status,
+            "vps_communication": vps_status
+        }
+    )
+
+@app.post("/api/vps/heartbeat", response_model=APIResponse)
+def receive_vps_heartbeat(
+    heartbeat_data: VPSHeartbeatCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_vps_api_key)
+):
+    """Receive heartbeat from VPS system"""
+    try:
+        # Create or update VPS heartbeat record
+        heartbeat = VPSHeartbeat(
+            vps_id=heartbeat_data.vps_id,
+            status=heartbeat_data.status,
+            signals_generated=heartbeat_data.signals_generated,
+            errors_count=heartbeat_data.errors_count,
+            uptime_seconds=heartbeat_data.uptime_seconds,
+            version=heartbeat_data.version,
+            mt5_status=heartbeat_data.mt5_status,
+            timestamp=datetime.now()
+        )
+        
+        db.add(heartbeat)
+        db.commit()
+        
+        print(f"💚 VPS Heartbeat received - VPS: {heartbeat_data.vps_id}, Status: {heartbeat_data.status}")
+        
+        return APIResponse(
+            status="success",
+            message=f"Heartbeat received from VPS {heartbeat_data.vps_id}",
+            data={
+                "vps_id": heartbeat_data.vps_id,
+                "signals_generated": heartbeat_data.signals_generated,
+                "uptime_seconds": heartbeat_data.uptime_seconds
+            }
+        )
+        
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error processing VPS heartbeat: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing heartbeat: {str(e)}"
+        )
+
+@app.post("/api/signals/receive", response_model=APIResponse)
+def receive_signal_from_vps(
+    signal_data: VPSSignalReceive,
+    request: Request,
+    db: Session = Depends(get_db),
+    _: bool = Depends(verify_vps_api_key)
+):
+    """Receive trading signal from VPS system"""
+    try:
+        # Create signal from VPS data
+        new_signal = Signal(
+            symbol=signal_data.signal.symbol,
+            signal_type=signal_data.signal.signal_type,
+            entry_price=signal_data.signal.entry_price,
+            stop_loss=signal_data.signal.stop_loss,
+            take_profit=signal_data.signal.take_profit,
+            reliability=signal_data.reliability or signal_data.signal.reliability or 0.0,
+            ai_analysis=signal_data.ai_analysis or signal_data.signal.ai_analysis,
+            confidence_score=signal_data.confidence_score or signal_data.signal.confidence_score or 0.0,
+            risk_level=signal_data.signal.risk_level or "MEDIUM",
+            vps_id=signal_data.vps_id,
+            source="VPS_AI",
+            is_public=True,
+            is_active=True,
+            created_at=signal_data.generated_at,
+            expires_at=signal_data.signal.expires_at
+        )
+        
+        db.add(new_signal)
+        db.commit()
+        db.refresh(new_signal)
+        
+        print(f"📊 Signal received from VPS {signal_data.vps_id}: {new_signal.symbol} {new_signal.signal_type} @ {new_signal.entry_price}")
+        
+        return APIResponse(
+            status="success",
+            message=f"Signal received and saved",
+            data={
+                "signal_id": new_signal.id,
+                "symbol": new_signal.symbol,
+                "signal_type": new_signal.signal_type.value,
+                "reliability": new_signal.reliability,
+                "vps_id": signal_data.vps_id
+            }
+        )
+        
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error processing VPS signal: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing signal: {str(e)}"
+        )
+
+@app.get("/api/signals/latest")
+def get_latest_signals_for_dashboard(
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    """Get latest signals for dashboard display"""
+    try:
+        latest_signals = db.query(Signal).filter(
+            Signal.is_active == True,
+            Signal.is_public == True
+        ).order_by(Signal.created_at.desc()).limit(limit).all()
+        
+        return {
+            "status": "success",
+            "signals": [
+                {
+                    "id": signal.id,
+                    "symbol": signal.symbol,
+                    "signal_type": signal.signal_type.value,
+                    "entry_price": signal.entry_price,
+                    "stop_loss": signal.stop_loss,
+                    "take_profit": signal.take_profit,
+                    "reliability": signal.reliability,
+                    "created_at": signal.created_at.isoformat(),
+                    "vps_id": signal.vps_id,
+                    "ai_analysis": signal.ai_analysis[:200] + "..." if signal.ai_analysis and len(signal.ai_analysis) > 200 else signal.ai_analysis
+                }
+                for signal in latest_signals
+            ],
+            "count": len(latest_signals)
+        }
+    except Exception as e:
+        print(f"❌ Error fetching latest signals: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching signals"
+        )
+
+@app.get("/api/vps/status")
+def get_vps_status(db: Session = Depends(get_db)):
+    """Get current VPS system status"""
+    try:
+        # Get latest heartbeats from each VPS (last 10 minutes)
+        latest_heartbeats = db.query(VPSHeartbeat).filter(
+            VPSHeartbeat.timestamp >= datetime.now() - timedelta(minutes=10)
+        ).order_by(VPSHeartbeat.timestamp.desc()).all()
+        
+        # Group by VPS ID to get latest status per VPS
+        vps_status = {}
+        for heartbeat in latest_heartbeats:
+            if heartbeat.vps_id not in vps_status:
+                vps_status[heartbeat.vps_id] = {
+                    "vps_id": heartbeat.vps_id,
+                    "status": heartbeat.status,
+                    "last_heartbeat": heartbeat.timestamp.isoformat(),
+                    "signals_generated": heartbeat.signals_generated,
+                    "errors_count": heartbeat.errors_count,
+                    "uptime_seconds": heartbeat.uptime_seconds,
+                    "mt5_status": heartbeat.mt5_status,
+                    "version": heartbeat.version
+                }
+        
+        return {
+            "status": "success",
+            "vps_systems": list(vps_status.values()),
+            "total_vps": len(vps_status),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        print(f"❌ Error getting VPS status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching VPS status"
+        )
 
 if __name__ == "__main__":
     import uvicorn
