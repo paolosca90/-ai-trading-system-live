@@ -222,7 +222,7 @@ def health_check():
 
 # ========== AUTHENTICATION ENDPOINTS ==========
 
-@app.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/register", status_code=status.HTTP_201_CREATED)
 def register_user(user: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Register new user with automatic trial subscription and welcome email (background)"""
     try:
@@ -259,10 +259,18 @@ def register_user(user: UserCreate, background_tasks: BackgroundTasks, db: Sessi
         background_tasks.add_task(send_registration_email, db_user.email, db_user.username)
         print(f"Email di benvenuto programmata per {db_user.email}")
 
-        return UserResponse(
-            message="Utente registrato con successo. Trial di 7 giorni attivato!",
-            user=db_user
-        )
+        return {
+            "message": "Utente registrato con successo. Trial di 7 giorni attivato!",
+            "user": {
+                "id": db_user.id,
+                "username": db_user.username,
+                "email": db_user.email,
+                "full_name": db_user.full_name,
+                "is_active": db_user.is_active,
+                "created_at": db_user.created_at.isoformat(),
+                "subscription_active": db_user.subscription_active
+            }
+        }
 
     except IntegrityError as e:
         db.rollback()
