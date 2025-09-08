@@ -478,11 +478,16 @@
                     if (data.status === 'success' && data.signals) {
                         updateLiveSignals(data.signals);
                         updateMarketOverview(data.signals);
+                        // Update performance stats from real data  
+                        updatePerformanceStats(data.signals);
+                    } else {
+                        // Update with empty array if no signals
+                        updatePerformanceStats([]);
                     }
+                } else {
+                    // Update with empty array if request failed
+                    updatePerformanceStats([]);
                 }
-                
-                // Update performance stats from real data  
-                updatePerformanceStats(data?.signals || []);
                 
             } catch (error) {
                 console.error('Error refreshing dashboard data:', error);
