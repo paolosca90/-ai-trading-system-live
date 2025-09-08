@@ -16,14 +16,14 @@ def send_registration_email(to_email, username):
     <div style="font-family: Arial, sans-serif; background-color: #0a0a0a; color: #e0e0e0; padding: 20px;">
       <div style="max-width: 600px; margin: 0 auto; background: linear-gradient(135deg,#1a1a1a,#2d2d2d); border:2px solid #00ff41; border-radius:15px; padding:30px;">
         <h1 style="color:#00ff41; text-align:center; font-size:24px; margin-bottom:20px;">
-          🎯 Benvenuto su AI Cash-Revolution!
+          Benvenuto su AI Cash-Revolution!
         </h1>
         <p style="font-size:16px;">Ciao <strong style="color:#00ff41;">{username}</strong>,<br>
         la tua registrazione è stata completata con successo.<br>
         Il <strong>trial gratuito di 7 giorni</strong> è ora attivo!</p>
         
         <div style="margin: 30px 0 25px 0; background: #191c1d; border:1px solid #00ff41; border-radius:8px; padding:16px 22px;">
-          <h3 style="color:#00ff41; margin-top:0; text-align:center;">🔒 I TUOI DATI DI ACCESSO</h3>
+          <h3 style="color:#00ff41; margin-top:0; text-align:center;"> I TUOI DATI DI ACCESSO</h3>
           <table style="width:100%; color:#e0e0e0; font-size:15px;">
             <tr><td style="padding:6px; color:#00ff41; font-weight:bold;">Username:</td><td style="padding:6px;">{username}</td></tr>
             <tr><td style="padding:6px; color:#00ff41; font-weight:bold;">Email:</td><td style="padding:6px;">{to_email}</td></tr>
@@ -35,17 +35,17 @@ def send_registration_email(to_email, username):
         
         <div style="text-align:center;margin:32px 0;">
           <a href="{login_url}" style="display:inline-block; background:linear-gradient(90deg,#00ff41,#00cc33); color:#000; text-decoration:none; padding:15px 37px; border-radius:25px; font-weight:bold; font-size:17px;">
-            🚀 Fai login nel tuo account
+             Fai login nel tuo account
           </a>
         </div>
         
         <div style="background: #2a2a2a; border-radius: 8px; padding: 13px 15px; margin: 18px 0;">
-          <h4 style="color:#00ff41; margin-top:0;">✅ Cosa puoi fare da subito:</h4>
+          <h4 style="color:#00ff41; margin-top:0;">- Cosa puoi fare da subito:</h4>
           <ul style="padding-left: 22px; line-height: 1.7;">
-            <li>📈 Ricevi segnali di trading AI in tempo reale</li>
-            <li>👤 Gestisci il tuo profilo e lo status abbonamento</li>
-            <li>⚙️ Configura MT5 per trading automatico</li>
-            <li>⏳ Prova tutte le funzionalità Premium per 7 giorni</li>
+            <li>- Ricevi segnali di trading AI in tempo reale</li>
+            <li>- Gestisci il tuo profilo e lo status abbonamento</li>
+            <li>- Configura MT5 per trading automatico</li>
+            <li>- Prova tutte le funzionalità Premium per 7 giorni</li>
           </ul>
         </div>
         
@@ -88,7 +88,7 @@ Account creato il {now}
     data = {
         "from": from_email,
         "to": [to_email],
-        "subject": "🚀 AI Cash-Revolution - I tuoi dati di accesso sono pronti!",
+        "subject": " AI Cash-Revolution - I tuoi dati di accesso sono pronti!",
         "html": html_body,
         "text": text_body,
     }
@@ -101,7 +101,7 @@ Account creato il {now}
     try:
         resp = requests.post("https://api.resend.com/emails", json=data, headers=headers, timeout=15)
         resp.raise_for_status()
-        print(f"✅ Email di benvenuto inviata con Resend a {to_email}")
+        print(f"- Email di benvenuto inviata con Resend a {to_email}")
         return True
     except Exception as e:
         print(f"❌ Errore invio Resend: {e}")
