@@ -53,11 +53,11 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # MT5 Bridge Configuration
-MT5_BRIDGE_URL = os.getenv("MT5_BRIDGE_URL", "http://ai.cash-revolution.com:8000")
-MT5_BRIDGE_API_KEY = os.getenv("MT5_BRIDGE_API_KEY", "1d2376ae63aedb38f4d13e1041fb5f0b56cc48c44a8f106194d2da23e4039736")
+MT5_BRIDGE_URL = os.getenv("BRIDGE_BASE_URL", "http://ai.cash-revolution.com:8000")
+MT5_BRIDGE_API_KEY = os.getenv("BRIDGE_API_KEY", "default-bridge-key")
 
-# VPS API Key for authentication
-VPS_API_KEY = os.getenv("VPS_API_KEY", "1d2376ae63aedb38f4d13e1041fb5f0b56cc48c44a8f106194d2da23e4039736")
+# VPS API Key for authentication  
+VPS_API_KEY = os.getenv("VPS_API_KEY", os.getenv("MT5_SECRET_KEY", "default-vps-key"))
 
 # Global MT5 connection status
 mt5_connection_active = False
@@ -234,11 +234,37 @@ def debug_environment():
     return {
         "railway_environment": "production",
         "database_url_set": bool(os.getenv("DATABASE_URL")),
-        "secret_key_set": bool(os.getenv("SECRET_KEY")), 
+        "secret_key_set": bool(os.getenv("SECRET_KEY")),
+        "bridge_api_key_set": bool(os.getenv("BRIDGE_API_KEY")),
+        "mt5_secret_key_set": bool(os.getenv("MT5_SECRET_KEY")),
+        "resend_api_key_set": bool(os.getenv("RESEND_API_KEY")),
         "mt5_bridge_url": MT5_BRIDGE_URL,
         "cors_enabled": True,
         "timestamp": datetime.utcnow()
     }
+
+@app.get("/debug/vps-connection")
+async def test_vps_connection():
+    """Test connection to VPS/MT5 Bridge"""
+    try:
+        bridge_status = await connect_to_mt5_bridge()
+        quotes_test = await get_mt5_quotes(["EURUSD"])
+        
+        return {
+            "mt5_bridge_connected": bridge_status,
+            "bridge_url": MT5_BRIDGE_URL,
+            "api_key_configured": bool(MT5_BRIDGE_API_KEY != "default-bridge-key"),
+            "quotes_available": len(quotes_test) > 0,
+            "sample_quotes": quotes_test,
+            "timestamp": datetime.utcnow()
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "mt5_bridge_connected": False,
+            "bridge_url": MT5_BRIDGE_URL,
+            "timestamp": datetime.utcnow()
+        }
 
 # ========== AUTHENTICATION ENDPOINTS ==========
 

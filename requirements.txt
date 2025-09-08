@@ -1,21 +1,18 @@
-# Core FastAPI dependencies
+# Core FastAPI - minimal for Railway
 fastapi==0.116.1
-uvicorn[standard]==0.35.0
+uvicorn==0.35.0
 
 # Database
 sqlalchemy==2.0.36
 psycopg2-binary==2.9.10
 python-dotenv==1.0.1
 
-# Authentication
-passlib[bcrypt]==1.7.4
-python-jose[cryptography]==3.5.0
+# Auth
+passlib==1.7.4
+python-jose==3.5.0
 python-multipart==0.0.20
-pydantic[email]==2.9.2
-email-validator==2.3.0
+pydantic==2.9.2
 
-# HTTP clients
+# HTTP 
 httpx==0.25.2
 requests==2.31.0
-
-# Minimal deps for Railway - removed numpy/pandas for faster builds
