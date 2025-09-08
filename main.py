@@ -256,9 +256,9 @@ def register_user(user: UserCreate, background_tasks: BackgroundTasks, db: Sessi
 
         print(f"Utente creato con ID: {db_user.id}")
 
-        # INVIO EMAIL IN BACKGROUND!
-        background_tasks.add_task(send_registration_email, db_user.email, db_user.username)
-        print(f"Email di benvenuto programmata per {db_user.email}")
+        # INVIO EMAIL IN BACKGROUND! (TEMPORANEAMENTE DISABILITATO)
+        # background_tasks.add_task(send_registration_email, db_user.email, db_user.username)
+        print(f"Email di benvenuto programmata per {db_user.email} (DISABILITATA)")
 
         return UserResponse(
             message="Utente registrato con successo. Trial di 7 giorni attivato!",
@@ -1059,7 +1059,7 @@ def receive_vps_heartbeat(
         
     except Exception as e:
         db.rollback()
-        print(f"❌ Error processing VPS heartbeat: {str(e)}")
+        print(f"Error processing VPS heartbeat: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing heartbeat: {str(e)}"
@@ -1113,7 +1113,7 @@ def receive_signal_from_vps(
         
     except Exception as e:
         db.rollback()
-        print(f"❌ Error processing VPS signal: {str(e)}")
+        print(f"Error processing VPS signal: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing signal: {str(e)}"
@@ -1151,7 +1151,7 @@ def get_latest_signals_for_dashboard(
             "count": len(latest_signals)
         }
     except Exception as e:
-        print(f"❌ Error fetching latest signals: {str(e)}")
+        print(f"Error fetching latest signals: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error fetching signals"
@@ -1189,7 +1189,7 @@ def get_vps_status(db: Session = Depends(get_db)):
         }
         
     except Exception as e:
-        print(f"❌ Error getting VPS status: {str(e)}")
+        print(f"Error getting VPS status: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error fetching VPS status"
