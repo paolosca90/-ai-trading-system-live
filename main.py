@@ -1194,6 +1194,54 @@ def get_vps_status(db: Session = Depends(get_db)):
             detail="Error fetching VPS status"
         )
 
+# EMERGENCY DATABASE RESET ENDPOINT - USE WITH CAUTION
+@app.post("/api/admin/reset-database")
+def reset_database_schema(
+    request: Request,
+    _: bool = Depends(verify_vps_api_key)
+):
+    """
+    EMERGENCY: Reset database schema to fix deployment issues
+    This will DROP ALL TABLES and recreate them with the new schema
+    USE ONLY WHEN SCHEMA MISMATCH OCCURS
+    """
+    try:
+        # Only allow this on Railway (production) when DATABASE_URL exists
+        if not os.getenv("DATABASE_URL"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This endpoint only works on Railway deployment"
+            )
+        
+        print("EMERGENCY DATABASE RESET INITIATED")
+        print("Dropping all existing tables...")
+        
+        # Drop all tables
+        Base.metadata.drop_all(bind=engine)
+        print("All tables dropped successfully")
+        
+        # Recreate all tables with new schema
+        print("Creating tables with new schema...")
+        Base.metadata.create_all(bind=engine)
+        print("All tables recreated successfully")
+        
+        return APIResponse(
+            status="success",
+            message="Database schema reset completed successfully",
+            data={
+                "action": "database_reset",
+                "timestamp": datetime.now().isoformat(),
+                "warning": "All previous data has been lost - this was an emergency schema fix"
+            }
+        )
+        
+    except Exception as e:
+        print(f"ERROR during database reset: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database reset failed: {str(e)}"
+        )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
