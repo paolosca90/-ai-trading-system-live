@@ -173,9 +173,8 @@
                     return;
                 }
 
-                const response = await fetch(CONFIG.API_BASE_URL + '/signals', {
+                const response = await fetch(CONFIG.VPS_BASE_URL + '/signals/latest', {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -191,15 +190,13 @@
                     throw new Error(`HTTP ${response.status}`);
                 }
 
-                const signals = await response.json();
+                const data = await response.json();
                 
-                // If no signals found, try to generate some
-                if (!signals || signals.length === 0) {
-                    await generateSignalsIfNeeded();
-                    // Try loading again after generation
-                    setTimeout(loadRealSignals, 3000);
+                // VPS returns data in {status, count, signals} format
+                if (data.status === 'success' && data.signals && data.signals.length > 0) {
+                    displayRealSignals(data.signals);
                 } else {
-                    displayRealSignals(signals);
+                    showNoSignalsMessage('No signals available at the moment');
                 }
 
             } catch (error) {
@@ -259,13 +256,13 @@
             const direction = signal.signal_type.toUpperCase();
             const directionClass = direction === 'BUY' ? 'buy' : 'sell';
             const statusClass = getStatusClass(signal);
-            const timeAgo = getTimeAgo(signal.created_at);
+            const timeAgo = getTimeAgo(signal.timestamp);
             const riskReward = calculateRiskReward(signal);
 
             return `
-                <div class="signal-item ${statusClass}" data-status="${getStatus(signal)}" data-pair="${signal.asset}">
+                <div class="signal-item ${statusClass}" data-status="${getStatus(signal)}" data-pair="${signal.symbol}">
                     <div class="signal-meta">
-                        <div class="signal-pair">${formatPair(signal.asset)}</div>
+                        <div class="signal-pair">${formatPair(signal.symbol)}</div>
                         <div class="signal-status ${getStatus(signal)}">${getStatusText(signal)}</div>
                     </div>
                     
@@ -294,9 +291,9 @@
                         </div>` : ''}
                     </div>
                     
-                    ${signal.gemini_explanation ? `<div class="signal-analysis">
+                    ${signal.explanation ? `<div class="signal-analysis">
                         <div class="analysis-title">AI Analysis:</div>
-                        <div class="analysis-text">${signal.gemini_explanation}</div>
+                        <div class="analysis-text">${signal.explanation}</div>
                     </div>` : ''}
                     
                     <div class="signal-actions">

@@ -467,21 +467,22 @@
             
             try {
                 // Load live signals
-                const signalsResponse = await fetch(CONFIG.API_BASE_URL + '/signals', {
+                const signalsResponse = await fetch(CONFIG.VPS_BASE_URL + '/signals/latest', {
                     headers: {
-                        'Authorization': `Bearer ${token}`,
                         'Accept': 'application/json'
                     }
                 });
                 
                 if (signalsResponse.ok) {
-                    const signals = await signalsResponse.json();
-                    updateLiveSignals(signals);
-                    updateMarketOverview(signals);
+                    const data = await signalsResponse.json();
+                    if (data.status === 'success' && data.signals) {
+                        updateLiveSignals(data.signals);
+                        updateMarketOverview(data.signals);
+                    }
                 }
                 
-                // Update performance stats from real data
-                updatePerformanceStats(signals || []);
+                // Update performance stats from real data  
+                updatePerformanceStats(data?.signals || []);
                 
             } catch (error) {
                 console.error('Error refreshing dashboard data:', error);
