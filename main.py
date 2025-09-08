@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
@@ -39,29 +39,13 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS middleware - Updated for better compatibility
+# CORS middleware - Simplified for Railway deployment  
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://www.cash-revolution.com",
-        "https://cash-revolution.com", 
-        "https://web-production-51f67.up.railway.app",
-        "http://localhost:3000",
-        "http://localhost:8000",
-        "*"
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "Accept",
-        "Accept-Language",
-        "Content-Language",
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-        "Origin",
-        "X-VPS-API-Key"
-    ],
+    allow_origins=["*"],
+    allow_credentials=False,  # Set to False when using * origins
+    allow_methods=["*"],
+    allow_headers=["*"],
     expose_headers=["*"]
 )
 
@@ -238,20 +222,23 @@ async def preflight_handler(request: Request, path: str):
     """Handle CORS preflight requests"""
     return {}
 
-@app.middleware("http")
-async def add_cors_headers(request: Request, call_next):
-    """Add CORS headers to all responses"""
-    response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Accept, Accept-Language, Content-Language, Content-Type, Authorization, X-Requested-With, Origin, X-VPS-API-Key"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
-    return response
-
 # Health check
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
+
+# Debug endpoint for Railway environment
+@app.get("/debug/env")
+def debug_environment():
+    """Debug endpoint to check Railway environment variables"""
+    return {
+        "railway_environment": "production",
+        "database_url_set": bool(os.getenv("DATABASE_URL")),
+        "secret_key_set": bool(os.getenv("SECRET_KEY")), 
+        "mt5_bridge_url": MT5_BRIDGE_URL,
+        "cors_enabled": True,
+        "timestamp": datetime.utcnow()
+    }
 
 # ========== AUTHENTICATION ENDPOINTS ==========
 
@@ -444,8 +431,12 @@ def get_recent_signals_preview(db: Session = Depends(get_db)):
         return {"signals": []}
 
 @app.get("/me", response_model=UserStatsOut)
-def get_current_user_info(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+def get_current_user_info(response: Response, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     """Get current user information with statistics"""
+    # Add explicit CORS headers
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Accept, Authorization, Content-Type"
     # Get user signals statistics
     total_signals = db.query(Signal).filter(Signal.user_id == current_user.id).count()
     active_signals = db.query(Signal).filter(
