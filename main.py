@@ -60,7 +60,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # MT5 Bridge Configuration
-MT5_BRIDGE_URL = os.getenv("BRIDGE_BASE_URL", "http://ai.cash-revolution.com:8000")
+MT5_BRIDGE_URL = os.getenv("BRIDGE_BASE_URL", "http://154.61.187.189:8001")
 MT5_BRIDGE_API_KEY = os.getenv("BRIDGE_API_KEY", "default-bridge-key")
 
 # VPS API Key for authentication  
@@ -99,60 +99,59 @@ def safe_date_diff_days(end_date, start_date=None):
         return 0
 
 # MT5 Bridge Helper Functions
-async def connect_to_mt5_bridge():
-    """Test connection to MT5 Bridge service"""
+async def connect_to_vps_bridge():
+    """Test connection to VPS AI Trading Server"""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(f"{MT5_BRIDGE_URL}/health")
             if response.status_code == 200:
                 data = response.json()
-                return data.get("mt5_initialized", False)
+                return data.get("status") == "healthy" or data.get("vps_running", False)
     except Exception as e:
-        print(f"MT5 Bridge connection error: {e}")
+        print(f"VPS Bridge connection error: {e}")
         return False
 
-async def get_mt5_quotes(symbols: List[str] = None):
-    """Fetch current quotes from MT5 Bridge"""
+async def get_vps_quotes(symbols: List[str] = None):
+    """Fetch current quotes from VPS AI signals - converted to quote format"""
     if not symbols:
         symbols = ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "USDCAD", "AUDUSD", "NZDUSD"]
     
     quotes = {}
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            headers = {"X-API-Key": MT5_BRIDGE_API_KEY}
-            for symbol in symbols:
-                try:
-                    # Get latest rates for the symbol
-                    rates_request = {
-                        "symbol": symbol,
-                        "timeframe": "M1",
-                        "count": 1
-                    }
-                    
-                    response = await client.post(
-                        f"{MT5_BRIDGE_URL}/bridge/rates",
-                        json=rates_request,
-                        headers=headers
-                    )
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        if data.get("rates") and len(data["rates"]) > 0:
-                            latest_rate = data["rates"][-1]
+            response = await client.get(f"{MT5_BRIDGE_URL}/signals/latest")
+            
+            if response.status_code == 200:
+                data = response.json()
+                signals = data.get("signals", [])
+                
+                # Convert VPS signals to quote format
+                for signal in signals:
+                    symbol = signal.get("symbol", "").upper()
+                    if symbol in [s.upper() for s in symbols]:
+                        entry_price = signal.get("entry_price", 0)
+                        if entry_price > 0:
+                            spread = 0.0001 if "USD" in symbol else 0.00001
                             quotes[symbol] = {
                                 "symbol": symbol,
-                                "bid": latest_rate["close"],
-                                "ask": latest_rate["close"] + 0.0001,  # Approximate spread
-                                "time": latest_rate["time"],
-                                "change": 0.0  # Calculate from previous close if needed
+                                "bid": entry_price,
+                                "ask": entry_price + spread,
+                                "time": signal.get("timestamp", ""),
+                                "change": 0.0,
+                                "signal_type": signal.get("signal_type", ""),
+                                "reliability": signal.get("reliability", 0),
+                                "ai_explanation": signal.get("explanation", "")
                             }
-                except Exception as e:
-                    print(f"Error fetching {symbol}: {e}")
-                    continue
+                            
     except Exception as e:
-        print(f"MT5 quotes fetch error: {e}")
+        print(f"VPS quotes fetch error: {e}")
     
     return quotes
+
+# Keep original function name for compatibility
+async def get_mt5_quotes(symbols: List[str] = None):
+    """Fetch quotes - now using VPS AI signals"""
+    return await get_vps_quotes(symbols)
 
 # Dependency
 def get_db():
@@ -509,8 +508,13 @@ def get_current_user_info(response: Response, current_user: User = Depends(get_c
     return UserStatsOut(
         total_signals=total_signals,
         active_signals=active_signals,
-        total_executions=total_executions_count,
-        avg_reliability=round(avg_reliability, 2)
+        winning_signals=winning_signals,
+        losing_signals=losing_signals,
+        win_rate=round(win_rate, 2),
+        total_profit_loss=total_profit_loss,
+        average_reliability=round(avg_reliability, 2),
+        subscription_status=subscription_status,
+        subscription_days_left=days_left
     )
 
 # ========== SIGNAL ENDPOINTS ==========
@@ -692,7 +696,7 @@ async def get_live_quotes(
         symbol_list = [s.strip().upper() for s in symbols.split(",")]
 
     # Check MT5 Bridge connection
-    bridge_connected = await connect_to_mt5_bridge()
+    bridge_connected = await connect_to_vps_bridge()
     mt5_connection_active = bridge_connected
 
     if not bridge_connected:
@@ -730,7 +734,7 @@ async def get_public_live_quotes(symbols: Optional[str] = None):
         symbol_list = ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD"]
 
     # Check MT5 Bridge connection
-    bridge_connected = await connect_to_mt5_bridge()
+    bridge_connected = await connect_to_vps_bridge()
     mt5_connection_active = bridge_connected
 
     if not bridge_connected:
@@ -1223,6 +1227,60 @@ def get_latest_signals_for_dashboard(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error fetching signals"
         )
+
+@app.get("/api/vps/signals/live")
+async def get_live_vps_signals(limit: int = 20):
+    """Get live AI signals directly from VPS for frontend display"""
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(f"{MT5_BRIDGE_URL}/signals/latest")
+            
+            if response.status_code == 200:
+                vps_data = response.json()
+                vps_signals = vps_data.get("signals", [])[:limit]
+                
+                # Format signals for frontend
+                formatted_signals = []
+                for signal in vps_signals:
+                    formatted_signals.append({
+                        "symbol": signal.get("symbol", ""),
+                        "signal_type": signal.get("signal_type", ""),
+                        "entry_price": signal.get("entry_price", 0),
+                        "stop_loss": signal.get("stop_loss", 0),
+                        "take_profit": signal.get("take_profit", 0),
+                        "reliability": signal.get("reliability", 0),
+                        "explanation": signal.get("explanation", ""),
+                        "timestamp": signal.get("timestamp", ""),
+                        "timeframe": signal.get("timeframe", "H1"),
+                        "risk_reward": signal.get("risk_reward", 0),
+                        "technical_scores": signal.get("technical_scores", {}),
+                        "volume": signal.get("volume", 0.01)
+                    })
+                
+                return {
+                    "status": "success",
+                    "source": "VPS_AI",
+                    "signals": formatted_signals,
+                    "count": len(formatted_signals),
+                    "vps_status": "active",
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": "VPS non raggiungibile",
+                    "signals": [],
+                    "count": 0
+                }
+                
+    except Exception as e:
+        print(f"Error fetching VPS signals: {str(e)}")
+        return {
+            "status": "error", 
+            "message": f"Errore connessione VPS: {str(e)}",
+            "signals": [],
+            "count": 0
+        }
 
 @app.get("/api/vps/status")
 def get_vps_status(db: Session = Depends(get_db)):
