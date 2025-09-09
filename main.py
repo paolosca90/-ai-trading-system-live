@@ -251,10 +251,10 @@ def debug_environment():
 
 @app.get("/debug/vps-connection")
 async def test_vps_connection():
-    """Test connection to VPS/MT5 Bridge"""
+    """Test connection to VPS AI Trading Server"""
     try:
-        bridge_status = await connect_to_mt5_bridge()
-        quotes_test = await get_mt5_quotes(["EURUSD"])
+        bridge_status = await connect_to_vps_bridge()
+        quotes_test = await get_vps_quotes(["EURUSD"])
         
         return {
             "mt5_bridge_connected": bridge_status,
