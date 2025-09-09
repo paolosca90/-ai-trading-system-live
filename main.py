@@ -40,11 +40,17 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS middleware - Simplified for Railway deployment  
+# CORS middleware - Allow specific domains with credentials
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # Set to False when using * origins
+    allow_origins=[
+        "https://www.cash-revolution.com",
+        "https://cash-revolution.com", 
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://web-production-51f67.up.railway.app"
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"]
