@@ -60,21 +60,21 @@ def get_user_by_username(db: Session, username: str):
 
 def authenticate_user(db: Session, username_or_email: str, password: str):
     """Authenticate user - SUPPORTA LOGIN CON USERNAME O EMAIL + DEBUG"""
-    print(f"🔐 Tentativo login per: {username_or_email}")
+    print(f"[AUTH] Tentativo login per: {username_or_email}")
     
     user = get_user_by_username_or_email(db, username_or_email)
     if not user:
-        print(f"❌ Utente NON trovato: {username_or_email}")
+        print(f"[AUTH] Utente NON trovato: {username_or_email}")
         return False
     
-    print(f"✅ Utente trovato - ID: {user.id}, Username: {user.username}, Email: {user.email}")
-    print(f"🔑 Hash salvato: {user.hashed_password[:20]}...")
+    print(f"[AUTH] Utente trovato - ID: {user.id}, Username: {user.username}, Email: {user.email}")
+    print(f"[AUTH] Hash salvato: {user.hashed_password[:20]}...")
     
     if not verify_password(password, user.hashed_password):
-        print(f"❌ Password ERRATA per {username_or_email}")
+        print(f"[AUTH] Password ERRATA per {username_or_email}")
         return False
     
-    print(f"✅ Login RIUSCITO per {user.username}")
+    print(f"[AUTH] Login RIUSCITO per {user.username}")
     return user
 
 def get_current_user(token: str = Depends(oauth2_scheme)):

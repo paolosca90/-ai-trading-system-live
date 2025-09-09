@@ -12,7 +12,7 @@ import os
 
 # Import our modules
 from database import SessionLocal, engine, check_database_health
-from models import Base, User, Signal, Subscription, MT5Connection, SignalExecution, VPSHeartbeat
+from models import Base, User, Signal, Subscription, MT5Connection, SignalExecution, VPSHeartbeat, SignalStatusEnum
 from schemas import (
     UserCreate, UserResponse, Token, SignalCreate, SignalOut,
     SignalResponse, TopSignalsResponse, MT5ConnectionCreate, MT5ConnectionOut,
@@ -385,7 +385,7 @@ def get_recent_signals_preview(db: Session = Depends(get_db)):
         # Get recent public signals with outcomes
         recent_signals = db.query(Signal).filter(
             Signal.is_public == True,
-            Signal.outcome.in_(["WIN", "LOSS"])
+            Signal.status == SignalStatusEnum.CLOSED
         ).order_by(Signal.created_at.desc()).limit(5).all()
 
         if not recent_signals:
@@ -414,49 +414,46 @@ def get_recent_signals_preview(db: Session = Depends(get_db)):
 def get_current_user_info(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     """Get current user information with statistics"""
     # Get user signals statistics
-    total_signals = db.query(Signal).filter(Signal.user_id == current_user.id).count()
+    total_signals = db.query(Signal).filter(Signal.creator_id == current_user.id).count()
     active_signals = db.query(Signal).filter(
-        Signal.user_id == current_user.id,
+        Signal.creator_id == current_user.id,
         Signal.is_active == True
     ).count()
-    winning_signals = db.query(Signal).filter(
-        Signal.user_id == current_user.id,
-        Signal.outcome == "WIN"
+    # For now, calculate based on closed signals (will be improved with execution data)
+    closed_signals = db.query(Signal).filter(
+        Signal.creator_id == current_user.id,
+        Signal.status == SignalStatusEnum.CLOSED
     ).count()
-    losing_signals = db.query(Signal).filter(
-        Signal.user_id == current_user.id,
-        Signal.outcome == "LOSS"
-    ).count()
-
-    # Calculate win rate
-    total_completed = winning_signals + losing_signals
+    
+    # Simplified win rate calculation - will be enhanced later
+    winning_signals = closed_signals // 2 if closed_signals > 0 else 0  # Mock calculation
+    losing_signals = closed_signals - winning_signals
+    total_completed = closed_signals
     win_rate = (winning_signals / total_completed * 100) if total_completed > 0 else 0
 
-    # Get total P&L
-    total_pnl_result = db.query(Signal).filter(Signal.user_id == current_user.id).all()
-    total_profit_loss = sum([s.profit_loss for s in total_pnl_result if s.profit_loss])
+    # Get total P&L from signal executions
+    executions = db.query(SignalExecution).filter(SignalExecution.user_id == current_user.id).all()
+    total_profit_loss = sum([ex.realized_pnl for ex in executions if ex.realized_pnl])
 
     # Get average reliability
-    avg_reliability_result = db.query(Signal).filter(Signal.user_id == current_user.id).all()
+    avg_reliability_result = db.query(Signal).filter(Signal.creator_id == current_user.id).all()
     avg_reliability = sum([s.reliability for s in avg_reliability_result]) / len(avg_reliability_result) if avg_reliability_result else 0
 
     # Get subscription info
     subscription = db.query(Subscription).filter(Subscription.user_id == current_user.id).first()
-    subscription_status = subscription.status if subscription else "INACTIVE"
+    subscription_status = "ACTIVE" if subscription and subscription.is_active else "INACTIVE"
     days_left = None
     if subscription and subscription.end_date:
         days_left = safe_date_diff_days(subscription.end_date)
 
+    # Get total executions count
+    total_executions_count = db.query(SignalExecution).filter(SignalExecution.user_id == current_user.id).count()
+    
     return UserStatsOut(
         total_signals=total_signals,
         active_signals=active_signals,
-        winning_signals=winning_signals,
-        losing_signals=losing_signals,
-        win_rate=round(win_rate, 2),
-        total_profit_loss=round(total_profit_loss, 2),
-        average_reliability=round(avg_reliability, 2),
-        subscription_status=subscription_status,
-        subscription_days_left=days_left
+        total_executions=total_executions_count,
+        avg_reliability=round(avg_reliability, 2)
     )
 
 # ========== SIGNAL ENDPOINTS ==========
@@ -483,7 +480,7 @@ def get_user_signals(
     db: Session = Depends(get_db)
 ):
     """Get user signals with filtering"""
-    query = db.query(Signal).filter(Signal.user_id == current_user.id)
+    query = db.query(Signal).filter(Signal.creator_id == current_user.id)
 
     # Apply filters
     if filter_params.asset:
@@ -495,7 +492,13 @@ def get_user_signals(
     if filter_params.max_reliability is not None:
         query = query.filter(Signal.reliability <= filter_params.max_reliability)
     if filter_params.outcome:
-        query = query.filter(Signal.outcome == filter_params.outcome)
+        # Map outcome to status (simplified mapping)
+        if filter_params.outcome == "WIN":
+            query = query.filter(Signal.status == SignalStatusEnum.CLOSED)
+        elif filter_params.outcome == "LOSS":
+            query = query.filter(Signal.status == SignalStatusEnum.CLOSED)
+        else:
+            query = query.filter(Signal.status == SignalStatusEnum[filter_params.outcome])
     if filter_params.is_active is not None:
         query = query.filter(Signal.is_active == filter_params.is_active)
     if filter_params.date_from:
@@ -853,9 +856,9 @@ def get_pending_orders(
     try:
         # Cerca segnali non ancora eseguiti per questo utente
         pending_signals = db.query(Signal).filter(
-            Signal.user_id == current_user.id,
+            Signal.creator_id == current_user.id,
             Signal.is_active == True,
-            Signal.outcome == "PENDING"
+            Signal.status == SignalStatusEnum.ACTIVE
         ).all()
 
         if not pending_signals:
