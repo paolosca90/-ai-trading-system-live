@@ -1099,7 +1099,19 @@ def receive_vps_heartbeat(
     db: Session = Depends(get_db),
     _: bool = Depends(verify_vps_api_key)
 ):
-    """Receive heartbeat from VPS system"""
+    """
+    Receive heartbeat from VPS system (PUSH from VPS to Railway)
+    
+    VPS PUSH ENDPOINT - Called by VPS every few minutes
+    
+    Required header: X-VPS-API-Key: [MT5_SECRET_KEY environment variable]
+    
+    This endpoint:
+    - Stores VPS status and health information
+    - Tracks signal generation statistics
+    - Monitors VPS uptime and errors
+    - Enables Railway to know VPS is alive and working
+    """
     try:
         # Create or update VPS heartbeat record
         heartbeat = VPSHeartbeat(
@@ -1143,7 +1155,21 @@ def receive_signal_from_vps(
     db: Session = Depends(get_db),
     _: bool = Depends(verify_vps_api_key)
 ):
-    """Receive trading signal from VPS system"""
+    """
+    Receive trading signal from VPS system (PUSH from VPS to Railway)
+    
+    VPS SIGNAL PUSH ENDPOINT - Called by VPS when new signals are generated
+    
+    Required header: X-VPS-API-Key: [MT5_SECRET_KEY environment variable]
+    
+    This endpoint:
+    - Receives new AI trading signals from VPS
+    - Stores signals in Railway database
+    - Makes signals available via /api/vps/signals/live
+    - Enables real-time signal delivery to frontend
+    
+    Flow: VPS AI → generates signal → POST /api/signals/receive → stored in DB → frontend shows via /api/vps/signals/live
+    """
     try:
         # Create signal from VPS data
         new_signal = Signal(
@@ -1229,55 +1255,75 @@ def get_latest_signals_for_dashboard(
         )
 
 @app.get("/api/vps/signals/live")
-async def get_live_vps_signals(limit: int = 20):
-    """Get live AI signals directly from VPS for frontend display"""
+def get_live_vps_signals(limit: int = 20, db: Session = Depends(get_db)):
+    """
+    Get live AI signals from database (pushed by VPS)
+    
+    IMPORTANT ARCHITECTURE NOTE:
+    This system uses VPS → Railway PUSH, not Railway → VPS PULL
+    
+    How it works:
+    1. VPS generates signals and sends them via POST /api/signals/receive
+    2. VPS sends heartbeats via POST /api/vps/heartbeat  
+    3. This endpoint serves the stored signals from database
+    4. Frontend calls this endpoint to display live signals
+    
+    VPS Authentication:
+    - VPS must send header: X-VPS-API-Key: [MT5_SECRET_KEY value]
+    - Without correct key, VPS gets 401 Unauthorized
+    
+    Advantages of PUSH system:
+    - No network connectivity issues (Railway can't reach VPS IP)
+    - Real-time signal delivery from VPS
+    - Better performance (cached in database)
+    - VPS controls the data flow
+    """
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.get(f"{MT5_BRIDGE_URL}/signals/latest")
-            
-            if response.status_code == 200:
-                vps_data = response.json()
-                vps_signals = vps_data.get("signals", [])[:limit]
-                
-                # Format signals for frontend
-                formatted_signals = []
-                for signal in vps_signals:
-                    formatted_signals.append({
-                        "symbol": signal.get("symbol", ""),
-                        "signal_type": signal.get("signal_type", ""),
-                        "entry_price": signal.get("entry_price", 0),
-                        "stop_loss": signal.get("stop_loss", 0),
-                        "take_profit": signal.get("take_profit", 0),
-                        "reliability": signal.get("reliability", 0),
-                        "explanation": signal.get("explanation", ""),
-                        "timestamp": signal.get("timestamp", ""),
-                        "timeframe": signal.get("timeframe", "H1"),
-                        "risk_reward": signal.get("risk_reward", 0),
-                        "technical_scores": signal.get("technical_scores", {}),
-                        "volume": signal.get("volume", 0.01)
-                    })
-                
-                return {
-                    "status": "success",
-                    "source": "VPS_AI",
-                    "signals": formatted_signals,
-                    "count": len(formatted_signals),
-                    "vps_status": "active",
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-            else:
-                return {
-                    "status": "error",
-                    "message": "VPS non raggiungibile",
-                    "signals": [],
-                    "count": 0
-                }
-                
+        # Get latest signals from database (received via VPS push)
+        latest_signals = db.query(Signal).filter(
+            Signal.is_active == True,
+            Signal.is_public == True,
+            Signal.source == "VPS_AI"  # Only VPS signals
+        ).order_by(Signal.created_at.desc()).limit(limit).all()
+        
+        # Format signals for frontend
+        formatted_signals = []
+        for signal in latest_signals:
+            formatted_signals.append({
+                "symbol": signal.symbol,
+                "signal_type": signal.signal_type.value if signal.signal_type else "",
+                "entry_price": signal.entry_price or 0,
+                "stop_loss": signal.stop_loss or 0,
+                "take_profit": signal.take_profit or 0,
+                "reliability": signal.reliability or 0,
+                "explanation": signal.ai_analysis or "AI analysis available",
+                "timestamp": signal.created_at.isoformat() if signal.created_at else "",
+                "timeframe": "H1",  # Default timeframe
+                "risk_reward": 3.0,  # Default risk/reward
+                "technical_scores": {},
+                "volume": 0.01,
+                "vps_id": signal.vps_id
+            })
+        
+        # Check if we have recent signals (less than 1 hour old)
+        recent_signals = [s for s in latest_signals if s.created_at and (datetime.utcnow() - s.created_at).total_seconds() < 3600]
+        vps_status = "active" if recent_signals else "no_recent_signals"
+        
+        return {
+            "status": "success",
+            "source": "DATABASE_VPS_PUSH",
+            "signals": formatted_signals,
+            "count": len(formatted_signals),
+            "vps_status": vps_status,
+            "timestamp": datetime.utcnow().isoformat(),
+            "message": f"Loaded {len(formatted_signals)} signals from database"
+        }
+        
     except Exception as e:
-        print(f"Error fetching VPS signals: {str(e)}")
+        print(f"Error fetching database VPS signals: {str(e)}")
         return {
             "status": "error", 
-            "message": f"Errore connessione VPS: {str(e)}",
+            "message": f"Database error: {str(e)}",
             "signals": [],
             "count": 0
         }
