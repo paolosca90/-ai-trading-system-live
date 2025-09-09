@@ -249,6 +249,17 @@ def debug_environment():
         "timestamp": datetime.utcnow()
     }
 
+@app.get("/debug/deployment-test") 
+def test_deployment_status():
+    """Test endpoint to verify latest deployment is active"""
+    return {
+        "deployment_status": "ACTIVE",
+        "system_architecture": "VPS_PUSH_TO_RAILWAY",
+        "commit_info": "3119f52 - Convert VPS system from PULL to PUSH", 
+        "timestamp": datetime.utcnow().isoformat(),
+        "vps_auth_required": "X-VPS-API-Key header with MT5_SECRET_KEY value"
+    }
+
 @app.get("/debug/vps-connection")
 async def test_vps_connection():
     """Test connection to VPS AI Trading Server"""
