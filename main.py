@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
@@ -39,24 +39,25 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS middleware
+# CORS middleware - Simplified for Railway deployment  
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # Set to False when using * origins
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # MT5 Bridge Configuration
-MT5_BRIDGE_URL = os.getenv("MT5_BRIDGE_URL", "http://ai.cash-revolution.com:8000")
-MT5_BRIDGE_API_KEY = os.getenv("MT5_BRIDGE_API_KEY", "1d2376ae63aedb38f4d13e1041fb5f0b56cc48c44a8f106194d2da23e4039736")
+MT5_BRIDGE_URL = os.getenv("BRIDGE_BASE_URL", "http://ai.cash-revolution.com:8000")
+MT5_BRIDGE_API_KEY = os.getenv("BRIDGE_API_KEY", "default-bridge-key")
 
-# VPS API Key for authentication
-VPS_API_KEY = os.getenv("VPS_API_KEY", "1d2376ae63aedb38f4d13e1041fb5f0b56cc48c44a8f106194d2da23e4039736")
+# VPS API Key for authentication  
+VPS_API_KEY = os.getenv("VPS_API_KEY", os.getenv("MT5_SECRET_KEY", "default-vps-key"))
 
 # Global MT5 connection status
 mt5_connection_active = False
@@ -215,10 +216,55 @@ def api_root():
         "endpoints": "/docs for API documentation"
     }
 
+# Explicit CORS preflight handler
+@app.options("/{path:path}")
+async def preflight_handler(request: Request, path: str):
+    """Handle CORS preflight requests"""
+    return {}
+
 # Health check
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow()}
+
+# Debug endpoint for Railway environment
+@app.get("/debug/env")
+def debug_environment():
+    """Debug endpoint to check Railway environment variables"""
+    return {
+        "railway_environment": "production",
+        "database_url_set": bool(os.getenv("DATABASE_URL")),
+        "secret_key_set": bool(os.getenv("SECRET_KEY")),
+        "bridge_api_key_set": bool(os.getenv("BRIDGE_API_KEY")),
+        "mt5_secret_key_set": bool(os.getenv("MT5_SECRET_KEY")),
+        "resend_api_key_set": bool(os.getenv("RESEND_API_KEY")),
+        "mt5_bridge_url": MT5_BRIDGE_URL,
+        "cors_enabled": True,
+        "timestamp": datetime.utcnow()
+    }
+
+@app.get("/debug/vps-connection")
+async def test_vps_connection():
+    """Test connection to VPS/MT5 Bridge"""
+    try:
+        bridge_status = await connect_to_mt5_bridge()
+        quotes_test = await get_mt5_quotes(["EURUSD"])
+        
+        return {
+            "mt5_bridge_connected": bridge_status,
+            "bridge_url": MT5_BRIDGE_URL,
+            "api_key_configured": bool(MT5_BRIDGE_API_KEY != "default-bridge-key"),
+            "quotes_available": len(quotes_test) > 0,
+            "sample_quotes": quotes_test,
+            "timestamp": datetime.utcnow()
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "mt5_bridge_connected": False,
+            "bridge_url": MT5_BRIDGE_URL,
+            "timestamp": datetime.utcnow()
+        }
 
 # ========== AUTHENTICATION ENDPOINTS ==========
 
@@ -411,8 +457,12 @@ def get_recent_signals_preview(db: Session = Depends(get_db)):
         return {"signals": []}
 
 @app.get("/me", response_model=UserStatsOut)
-def get_current_user_info(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+def get_current_user_info(response: Response, current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     """Get current user information with statistics"""
+    # Add explicit CORS headers
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Accept, Authorization, Content-Type"
     # Get user signals statistics
     total_signals = db.query(Signal).filter(Signal.creator_id == current_user.id).count()
     active_signals = db.query(Signal).filter(
